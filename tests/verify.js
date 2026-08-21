@@ -3,7 +3,7 @@
  */
 
 import { DEFAULT_KEY_PAIR, pemToBase64, computeCertFingerprint } from '../public/js/crypto-keys.js';
-import { PRESETS } from '../public/js/presets.js';
+import { PRESETS, detectSmartPreset } from '../public/js/presets.js';
 import { decompressRawDeflate, parseAuthnRequestXml } from '../public/js/saml-parser.js';
 import zlib from 'zlib';
 import crypto from 'crypto';
@@ -53,6 +53,13 @@ async function runTests() {
   assert(dbscPreset.dbsc.enabled === true, 'DBSC preset has dbsc enabled');
   assert(dbscPreset.dbsc.keys.length > 0 && dbscPreset.dbsc.keys[0].digest !== '', 'DBSC TrustedKey digest is configured');
   assert(dbscPreset.dbsc.certificates.length > 0 && dbscPreset.dbsc.certificates[0].fingerprint !== '', 'DBSC TrustedCertificate fingerprint is configured');
+
+  // Smart Preset Detection Tests
+  assert(detectSmartPreset('https://signin.aws.amazon.com/saml', '') === 'aws_iam', 'Smart detects AWS IAM from SP Entity ID');
+  assert(detectSmartPreset('https://sts.windows.net/tenant-id/', '') === 'azure_ad', 'Smart detects Azure AD from SP Entity ID');
+  assert(detectSmartPreset('google.com', 'https://www.google.com/a/company.com/acs') === 'google', 'Smart detects Google Workspace from ACS URL');
+  assert(detectSmartPreset('', '', '?dbsc=true') === 'dbsc', 'Smart detects DBSC from URL query parameter');
+  assert(detectSmartPreset('https://custom-app.example.com/saml', 'https://custom-app.example.com/acs') === 'default', 'Smart defaults to standard user for generic SP');
 
   // 3. Test Raw Deflate Inflation & Parser
   console.log('\n3. SAML AuthnRequest Deflation & Parser:');

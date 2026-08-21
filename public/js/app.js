@@ -7,7 +7,7 @@
 import { DEFAULT_KEY_PAIR, importPrivateKey, generateNewKeypair, computeCertFingerprint, pemToBase64 } from './crypto-keys.js';
 import { parseCurrentUrlParams, parseAuthnRequestXml, decodeSamlRequest } from './saml-parser.js';
 import { buildSamlResponse, formatXml } from './saml-builder.js';
-import { PRESETS } from './presets.js';
+import { PRESETS, detectSmartPreset } from './presets.js';
 
 // Application State
 const state = {
@@ -83,9 +83,6 @@ async function initApp() {
     console.error('Failed to import default private key:', e);
   }
 
-  // Load default preset attributes
-  applyPreset('default', false);
-
   // Parse incoming URL parameters (SAMLRequest, login_hint, RelayState)
   const urlParams = await parseCurrentUrlParams();
 
@@ -110,13 +107,11 @@ async function initApp() {
       state.loginHint = urlParams.loginHint;
       state.loginHintSource = urlParams.loginHintSource;
       state.nameId = urlParams.loginHint;
-      
-      // Also update email attribute if present
-      const emailAttr = state.attributes.find(a => a.name.toLowerCase() === 'email');
-      if (emailAttr) {
-        emailAttr.values = [urlParams.loginHint];
-      }
     }
+
+    // Smartly detect preset based on incoming SP Entity ID and ACS URL
+    const detectedPreset = detectSmartPreset(state.spEntityId, state.acsUrl, window.location.search);
+    applyPreset(detectedPreset, false, { preserveUser: true });
 
     // Show request alert banner and switch to SSO Editor tab
     showRequestBanner();
@@ -127,14 +122,16 @@ async function initApp() {
       state.loginHint = urlParams.loginHint;
       state.loginHintSource = urlParams.loginHintSource;
       state.nameId = urlParams.loginHint;
-      const emailAttr = state.attributes.find(a => a.name.toLowerCase() === 'email');
-      if (emailAttr) {
-        emailAttr.values = [urlParams.loginHint];
-      }
+      state.relayState = urlParams.relayState;
+
+      const detectedPreset = detectSmartPreset('', '', window.location.search);
+      applyPreset(detectedPreset, false, { preserveUser: true });
+
       showRequestBanner();
       switchTab('tab-editor');
     } else {
       // Default to landing page / Relying Party quick setup
+      applyPreset('default', false);
       switchTab('tab-landing');
     }
   }
@@ -493,20 +490,52 @@ async function updateSamlResponsePreview() {
 }
 
 /**
- * Applies a built-in Persona preset
+ * Applies a built-in Persona preset without overwriting request parameters (InResponseTo, RelayState, ACS URL, SP Entity ID, requested login_hint)
  */
-function applyPreset(presetId, autoUpdate = true) {
+function applyPreset(presetId, autoUpdate = true, options = {}) {
   const preset = PRESETS.find(p => p.id === presetId);
   if (!preset) return;
 
-  state.nameId = preset.nameId;
+  // Determine effective NameID:
+  // If login_hint is active or preserveUser is requested, keep the active user identifier
+  const preserveUser = options.preserveUser ?? (!!state.loginHint || (state.hasIncomingRequest && !!state.nameId && state.nameId !== 'user@example.com'));
+  const effectiveNameId = (preserveUser && state.nameId) ? state.nameId : preset.nameId;
+
+  state.nameId = effectiveNameId;
   state.nameIdFormat = preset.nameIdFormat;
+
+  // Deep clone preset attributes
   state.attributes = JSON.parse(JSON.stringify(preset.attributes));
 
+  // If a specific user identity is active, propagate it to relevant email/name attributes in the preset
+  if (effectiveNameId) {
+    for (const attr of state.attributes) {
+      const lowerName = attr.name.toLowerCase();
+      if (
+        lowerName === 'email' ||
+        lowerName === 'primary_email' ||
+        lowerName.endsWith('/emailaddress') ||
+        lowerName === 'user' ||
+        lowerName === 'login' ||
+        lowerName === 'rolesessionname' ||
+        lowerName.endsWith('/rolesessionname')
+      ) {
+        attr.values = [effectiveNameId];
+      }
+    }
+  }
+
+  // Configure DBSC settings from preset
   if (preset.dbsc) {
     state.dbsc = JSON.parse(JSON.stringify(preset.dbsc));
   } else {
     state.dbsc = { enabled: false, keys: [], certificates: [] };
+  }
+
+  // Synchronize preset selector dropdown
+  const presetSelect = document.getElementById('preset-selector');
+  if (presetSelect && presetSelect.value !== presetId) {
+    presetSelect.value = presetId;
   }
 
   if (autoUpdate) {

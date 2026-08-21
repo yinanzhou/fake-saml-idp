@@ -5,6 +5,8 @@ A SAML 2.0 Identity Provider designed for testing SAML Service Providers (SPs), 
 ## Key Features
 
 - **Sensible Out-of-the-Box Defaults**: Pre-populated with standard user identity (`user@example.com`, Jane Doe, roles, groups, timestamps) for instant testing.
+- **Smart SP Preset Auto-Detection**: Automatically selects matching attribute profiles (Google Workspace, AWS IAM, Microsoft Entra ID, W3C DBSC) based on incoming SP Entity ID, ACS URL, or query parameters.
+- **Request Context & Parameter Preservation**: Guarantees `InResponseTo`, `RelayState`, `ACS URL`, `SP Entity ID`, and active user identity (`login_hint`) are strictly preserved when switching presets.
 - **`login_hint` Auto-Detection**: Extracts `login_hint` from URL query parameters (`?login_hint=...`) or incoming SAML AuthnRequest `<saml:Subject>` to auto-populate user identity.
 - **W3C DBSC (Device Bound Session Credentials)**: Support for `<saml:Advice>` containing `<dbsc:TrustedKey>` and `<dbsc:TrustedCertificate>` conforming to the official W3C schema (`xmlns:dbsc="https://www.w3.org/ns/dbsc/saml"`).
 - **XML-DSig Signing**: Computes W3C Exclusive Canonicalization (`c14n-exc`) and generates RSA-SHA256 digital signatures.

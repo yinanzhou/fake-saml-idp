@@ -108,3 +108,62 @@ export const PRESETS = [
     dbsc: { enabled: false, keys: [], certificates: [] }
   }
 ];
+
+/**
+ * Smartly detect matching preset based on SP Entity ID / Issuer, ACS URL, or URL query hints
+ *
+ * @param {string} spEntityId - Service Provider Entity ID / Issuer
+ * @param {string} acsUrl - Assertion Consumer Service URL
+ * @param {string} searchString - Window location query string
+ * @returns {string} Matching preset ID ('aws_iam', 'azure_ad', 'google', 'dbsc', or 'default')
+ */
+export function detectSmartPreset(spEntityId = '', acsUrl = '', searchString = '') {
+  const spLower = (spEntityId || '').toLowerCase();
+  const acsLower = (acsUrl || '').toLowerCase();
+  const searchLower = (searchString || '').toLowerCase();
+
+  // 1. AWS IAM / AWS Identity Center
+  if (
+    spLower.includes('urn:amazon:webservices') ||
+    spLower.includes('signin.aws.amazon.com') ||
+    spLower.includes('aws.amazon.com') ||
+    acsLower.includes('signin.aws.amazon.com') ||
+    acsLower.includes('amazonaws.com')
+  ) {
+    return 'aws_iam';
+  }
+
+  // 2. Microsoft Entra ID (Azure AD) / Office 365
+  if (
+    spLower.includes('sts.windows.net') ||
+    spLower.includes('login.microsoftonline.com') ||
+    spLower.includes('urn:federation:microsoftonline') ||
+    acsLower.includes('login.microsoftonline.com')
+  ) {
+    return 'azure_ad';
+  }
+
+  // 3. Google Workspace / Google SSO
+  if (
+    spLower.includes('google.com') ||
+    spLower.includes('accounts.google.com') ||
+    acsLower.includes('google.com/a/') ||
+    acsLower.includes('accounts.google.com')
+  ) {
+    return 'google';
+  }
+
+  // 4. W3C DBSC Hint
+  if (
+    searchLower.includes('dbsc=true') ||
+    searchLower.includes('dbsc=1') ||
+    searchLower.includes('dbsc=yes') ||
+    spLower.includes('dbsc') ||
+    acsLower.includes('dbsc')
+  ) {
+    return 'dbsc';
+  }
+
+  return 'default';
+}
+

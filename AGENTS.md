@@ -67,7 +67,13 @@ This document provides architectural context, design constraints, and developer 
 - **`login_hint` Extraction**:
   - Extracts subject identity from query parameters (`?login_hint=...`, `?username=...`, `?email=...`) or from incoming `<saml:Subject><saml:NameID>` in the `AuthnRequest`.
 
-### D. Adding New Presets (`public/js/presets.js` & `public/index.html`)
+### D. Presets & Smart SP Detection (`public/js/presets.js` & `public/js/app.js`)
+- **Smart Preset Detection**:
+  - `detectSmartPreset(spEntityId, acsUrl, searchString)` inspects incoming SP issuer domains/patterns to automatically select matching presets (AWS IAM, Microsoft Entra ID, Google Workspace, DBSC).
+- **Request Context Preservation**:
+  - `applyPreset` MUST preserve request parameters (`inResponseTo`, `relayState`, `acsUrl`, `spEntityId`) and active user identity (`loginHint`), automatically propagating the active user to matching email/name attributes in the selected preset.
+
+### E. Adding New Presets
 When adding new test personas:
 1. Define the preset object in `public/js/presets.js`:
    ```javascript
@@ -83,8 +89,9 @@ When adding new test personas:
      dbsc: { enabled: false, keys: [], certificates: [] }
    }
    ```
-2. Add `<option value="my_preset">...</option>` inside `#preset-selector` in `public/index.html`.
-3. Add a corresponding test assertion in `tests/verify.js`.
+2. Update `detectSmartPreset` in `public/js/presets.js` if the SP has distinctive Entity ID or ACS patterns.
+3. Add `<option value="my_preset">...</option>` inside `#preset-selector` in `public/index.html`.
+4. Add a corresponding test assertion in `tests/verify.js`.
 
 ## 4. Verification & Testing
 
