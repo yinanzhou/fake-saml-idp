@@ -12,6 +12,7 @@ A client-side SAML 2.0 Identity Provider designed for testing SAML Service Provi
 - **`login_hint` / `LoginHint` Auto-Detection**: Extracts login hints from URL query parameters (`?login_hint=...`, `?LoginHint=...`, `?username=...`, `?email=...`) or incoming SAML AuthnRequest `<saml:Subject>` to auto-populate user identity.
 - **W3C DBSC (Device Bound Session Credentials)**: Support for `<saml:Advice>` containing `<dbsc:TrustedKey>` and `<dbsc:TrustedCertificate>` conforming to the official W3C schema (`xmlns:dbsc="https://www.w3.org/ns/dbsc/saml"`).
 - **XML-DSig Signing**: Computes W3C Exclusive Canonicalization (`c14n-exc`) and generates RSA-SHA256 digital signatures.
+- **Interactive Single Logout (SLO) Debugger (`/logout`)**: Parses incoming `<samlp:LogoutRequest>`, inspects Subject / SessionIndex, and allows developers to manually configure status codes and submit signed `<samlp:LogoutResponse>` payloads via HTTP-POST or HTTP-Redirect.
 - **Relying Party Hub & Cheatsheets**: Copy cards for SSO URLs, EntityID, Certificate PEM, Base64 strings, SHA-256 fingerprints, and metadata downloads.
 
 ## Relying Party (Service Provider) Configuration

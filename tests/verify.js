@@ -6,8 +6,8 @@
 
 import { DEFAULT_KEY_PAIR, pemToBase64, computeCertFingerprint, importPrivateKey } from '../public/js/crypto-keys.js';
 import { PRESETS, detectSmartPreset } from '../public/js/presets.js';
-import { decompressRawDeflate, parseAuthnRequestXml, parseCurrentUrlParams } from '../public/js/saml-parser.js';
-import { buildSamlResponse, toBase64Url } from '../public/js/saml-builder.js';
+import { decompressRawDeflate, parseAuthnRequestXml, parseLogoutRequestXml, parseCurrentUrlParams } from '../public/js/saml-parser.js';
+import { buildSamlResponse, buildSamlLogoutResponse, toBase64Url } from '../public/js/saml-builder.js';
 import { canonicalize, computeXmlDigest } from '../public/js/xml-signer.js';
 import zlib from 'zlib';
 import crypto from 'crypto';
@@ -470,6 +470,69 @@ async function runTests() {
     const changePassContent = fs.readFileSync(path.resolve('public/change-password.html'), 'utf-8');
     assert(changePassContent.includes('Change Password'), 'change-password.html contains change password content');
   }
+
+  // 9. Test SAML Single Logout (SLO) Protocol & XMLDSig Signatures
+  console.log('\n9. SAML Single Logout (SLO) Protocol & XMLDSig:');
+  const sampleLogoutRequestXml = `<?xml version="1.0" encoding="UTF-8"?>
+<samlp:LogoutRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_slo_req_998877" Version="2.0" IssueInstant="2026-08-21T06:00:00Z" Destination="https://fake-saml-idp.pages.dev/logout">
+  <saml:Issuer>https://sp.example.com/metadata</saml:Issuer>
+  <saml:NameID Format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress">alice.slo@company.com</saml:NameID>
+  <samlp:SessionIndex>_sess_slo_112233</samlp:SessionIndex>
+</samlp:LogoutRequest>`;
+
+  const parsedLogoutReq = parseLogoutRequestXml(sampleLogoutRequestXml);
+  assert(parsedLogoutReq.id === '_slo_req_998877', 'Extracted LogoutRequest ID');
+  assert(parsedLogoutReq.issuer === 'https://sp.example.com/metadata', 'Extracted LogoutRequest Issuer');
+  assert(parsedLogoutReq.nameId === 'alice.slo@company.com', 'Extracted LogoutRequest NameID');
+  assert(parsedLogoutReq.sessionIndex === '_sess_slo_112233', 'Extracted LogoutRequest SessionIndex');
+  assert(parsedLogoutReq.destination === 'https://fake-saml-idp.pages.dev/logout', 'Extracted LogoutRequest Destination');
+
+  // Build LogoutResponse
+  const sloResponseResult = await buildSamlLogoutResponse({
+    destination: 'https://sp.example.com/saml/slo',
+    inResponseTo: parsedLogoutReq.id,
+    idpEntityId: 'https://fake-saml-idp.pages.dev/saml/idp',
+    statusCode: 'urn:oasis:names:tc:SAML:2.0:status:Success',
+    statusMessage: 'Session terminated',
+    signResponse: true,
+    privateKey,
+    certPem: DEFAULT_KEY_PAIR.certPem
+  });
+
+  assert(sloResponseResult.inResponseTo === '_slo_req_998877', 'LogoutResponse inResponseTo matches LogoutRequest ID');
+  assert(sloResponseResult.destination === 'https://sp.example.com/saml/slo', 'LogoutResponse destination matches');
+  assert(sloResponseResult.rawXmlString.includes('urn:oasis:names:tc:SAML:2.0:status:Success'), 'LogoutResponse contains Success status code');
+  assert(sloResponseResult.rawXmlString.includes('<samlp:StatusMessage>Session terminated</samlp:StatusMessage>'), 'LogoutResponse contains status message');
+
+  // Cryptographically verify LogoutResponse Signature
+  const sloDoc = parseXmlString(sloResponseResult.rawXmlString);
+  const sloRoot = sloDoc.documentElement;
+  const sloSig = sloRoot.getElementsByTagNameNS('*', 'Signature')[0];
+  assert(sloSig !== undefined, 'LogoutResponse contains <ds:Signature>');
+
+  const sloSignedInfo = sloSig.getElementsByTagNameNS('*', 'SignedInfo')[0];
+  const sloDigestValue = sloSignedInfo.getElementsByTagNameNS('*', 'DigestValue')[0].textContent.trim();
+  const sloSignatureValue = sloSig.getElementsByTagNameNS('*', 'SignatureValue')[0].textContent.trim();
+
+  // Remove signature and canonicalize root
+  sloRoot.removeChild(sloSig);
+  const canonicalSloTarget = canonicalize(sloRoot);
+  const computedSloDigest = await computeXmlDigest(canonicalSloTarget);
+  assert(computedSloDigest === sloDigestValue, `LogoutResponse DigestValue matches SHA-256 digest: ${sloDigestValue}`);
+
+  // Verify SignatureValue with Node Crypto
+  const canonicalSloSignedInfo = canonicalize(sloSignedInfo);
+  const sloVerifier = crypto.createVerify('RSA-SHA256');
+  sloVerifier.update(Buffer.from(canonicalSloSignedInfo, 'utf-8'));
+  const isSloSigValid = sloVerifier.verify(DEFAULT_KEY_PAIR.certPem, Buffer.from(sloSignatureValue, 'base64'));
+  assert(isSloSigValid === true, 'LogoutResponse SignatureValue verified successfully with RSA-SHA256 against X.509 certificate');
+
+  // Test PartialLogout and Requester status codes
+  const partialResponse = await buildSamlLogoutResponse({
+    statusCode: 'urn:oasis:names:tc:SAML:2.0:status:PartialLogout',
+    signResponse: false
+  });
+  assert(partialResponse.rawXmlString.includes('urn:oasis:names:tc:SAML:2.0:status:PartialLogout'), 'LogoutResponse supports PartialLogout status');
 
   console.log(`\n========================================`);
   console.log(`Test Results: ${passed} Passed, ${failed} Failed`);

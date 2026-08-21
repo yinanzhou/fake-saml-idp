@@ -66,12 +66,15 @@ This document provides architectural context, design constraints, and developer 
   - Sorts attributes lexicographically (unprefixed first, then by prefix/name).
   - Supports signing both `<saml:Assertion>` (default standard) and the enclosing `<samlp:Response>`.
 
-### C. SAML AuthnRequest Decompression (`public/js/saml-parser.js`)
+### C. SAML AuthnRequest & LogoutRequest Parsing (`public/js/saml-parser.js`)
 - **RFC 1951 Deflate Decoding**:
   - Browser environments use the native `DecompressionStream('deflate-raw')` with fallback to `DecompressionStream('deflate')`.
   - Automated tests running in Node.js fallback gracefully to `zlib.inflateRawSync`.
 - **`login_hint` & `LoginHint` Extraction**:
   - Extracts subject identity from query parameters (`?login_hint=...`, `?LoginHint=...`, `?username=...`, `?email=...`) or from incoming `<saml:Subject><saml:NameID>` in the `AuthnRequest`.
+- **SAML 2.0 Single Logout (SLO) Parsing**:
+  - `parseLogoutRequestXml(xmlString)` extracts `ID`, `Issuer`, `NameID`, `SessionIndex`, and `Destination` from incoming `<samlp:LogoutRequest>` payloads.
+  - `buildSamlLogoutResponse(...)` in `public/js/saml-builder.js` constructs schema-compliant signed `<samlp:LogoutResponse>` messages.
 
 ### D. Presets & Smart SP Detection (`public/js/presets.js` & `public/js/app.js`)
 - **Smart Preset Detection**:

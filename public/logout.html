@@ -3,48 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Logout - Fake SAML IdP</title>
+  <title>Single Logout (SLO) - Fake SAML IdP</title>
+  <meta name="description" content="SAML 2.0 Single Logout (SLO) endpoint for testing LogoutRequests, manual response submission, and XML digital signatures.">
   <link rel="stylesheet" href="/css/style.css">
   <style>
-    .endpoint-wrapper {
-      min-height: 80vh;
+    .slo-container {
+      max-width: 1000px;
+      margin: 24px auto;
+      padding: 0 16px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 24px;
+      gap: 20px;
     }
-    .endpoint-code {
-      font-size: 56px;
-      font-weight: 800;
-      color: var(--accent-green);
-      line-height: 1;
+    .field-row {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 12px;
+      align-items: center;
       margin-bottom: 12px;
     }
-    .endpoint-title {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: var(--text);
-    }
-    .endpoint-desc {
-      color: var(--text-secondary);
-      max-width: 480px;
-      margin-bottom: 24px;
-      font-size: 14px;
+    @media (max-width: 640px) {
+      .field-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Header -->
   <header class="app-header">
     <div class="brand-section">
-      <a href="/" style="text-decoration: none; color: inherit;">
+      <a href="/" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 8px;">
         <div class="brand-title">Fake SAML IdP</div>
+        <span class="badge badge-info">Single Logout (SLO)</span>
       </a>
     </div>
     <div class="header-actions">
       <a href="/" class="btn btn-sm">SSO Hub</a>
+      <a href="/idp-metadata.xml" class="btn btn-sm">Metadata XML</a>
       <a href="https://github.com/yinanzhou/fake-saml-idp" target="_blank" rel="noopener noreferrer" class="btn btn-sm" title="View Source on GitHub" aria-label="GitHub Repository" style="display: inline-flex; align-items: center; justify-content: center; padding: 5px 8px;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle;">
           <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
@@ -54,23 +51,365 @@
     </div>
   </header>
 
-  <div class="endpoint-wrapper">
-    <div class="endpoint-code">Logout</div>
-    <h1 class="endpoint-title">Single Logout (SLO) Endpoint</h1>
-    <p class="endpoint-desc">
-      You have been successfully logged out. This is a fake Single Logout endpoint for testing SAML Service Providers.
-    </p>
-    <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
-      <a href="/" class="btn btn-primary btn-lg">Back to Hub</a>
-      <a href="/idp-metadata.xml" class="btn btn-lg">View Metadata XML</a>
+  <!-- Banner -->
+  <div class="alert-banner" id="slo-banner" style="display: none;">
+    <div class="alert-content">
+      <span id="slo-banner-text">Incoming SAML LogoutRequest detected</span>
     </div>
   </div>
 
-  <script>
-    document.getElementById('btn-toggle-theme')?.addEventListener('click', () => {
-      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-      document.documentElement.setAttribute('data-theme', isLight ? 'dark' : 'light');
-    });
+  <main class="slo-container">
+    <!-- Card 1: Incoming LogoutRequest Inspector -->
+    <section class="card" id="request-card">
+      <div class="card-header">
+        <div class="card-title">1. Incoming SAML LogoutRequest</div>
+        <span class="badge" id="request-status-badge">No Request Detected</span>
+      </div>
+      <div class="card-body">
+        <div id="no-request-message" style="color: var(--text-secondary); margin-bottom: 16px;">
+          You have been logged out. No incoming <code>LogoutRequest</code> was found in the URL query string. You can test a simulated SP logout or enter custom parameters below.
+        </div>
+
+        <div class="field-row">
+          <label class="form-label" for="req-issuer">SP Entity ID (Issuer):</label>
+          <input type="text" id="req-issuer" class="form-input" placeholder="https://sp.example.com/saml/metadata">
+        </div>
+
+        <div class="field-row">
+          <label class="form-label" for="req-nameid">Subject / NameID:</label>
+          <input type="text" id="req-nameid" class="form-input" placeholder="user@example.com">
+        </div>
+
+        <div class="field-row">
+          <label class="form-label" for="req-session-index">SessionIndex:</label>
+          <input type="text" id="req-session-index" class="form-input" placeholder="_sess_123456789 (optional)">
+        </div>
+
+        <div class="field-row">
+          <label class="form-label" for="req-id">LogoutRequest ID:</label>
+          <input type="text" id="req-id" class="form-input" placeholder="_req_logout_123456">
+        </div>
+
+        <div class="field-row">
+          <label class="form-label" for="req-relay-state">RelayState:</label>
+          <input type="text" id="req-relay-state" class="form-input" placeholder="Optional SP state token">
+        </div>
+
+        <div style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-sm" id="btn-load-sample-req">Simulate Sample SP Logout</button>
+          <button type="button" class="btn btn-sm" id="btn-toggle-raw-req">Toggle Decoded XML View</button>
+        </div>
+
+        <div id="raw-req-container" style="display: none; margin-top: 12px;">
+          <label class="form-label">Decoded LogoutRequest XML:</label>
+          <pre class="code-box" id="raw-req-xml" style="max-height: 180px;"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 2: LogoutResponse Configuration & Manual Submission -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">2. SAML LogoutResponse & Submission</div>
+        <span class="badge badge-info">Manual Developer Submit</span>
+      </div>
+      <div class="card-body">
+        <div class="field-row">
+          <label class="form-label" for="resp-destination">SP Return URL (Destination):</label>
+          <input type="url" id="resp-destination" class="form-input" placeholder="https://sp.example.com/saml/slo" value="https://sp.example.com/saml/slo">
+        </div>
+
+        <div class="field-row">
+          <label class="form-label" for="resp-status">SAML Status Code:</label>
+          <select id="resp-status" class="form-select">
+            <option value="urn:oasis:names:tc:SAML:2.0:status:Success">Success (urn:oasis:names:tc:SAML:2.0:status:Success)</option>
+            <option value="urn:oasis:names:tc:SAML:2.0:status:PartialLogout">Partial Logout (urn:oasis:names:tc:SAML:2.0:status:PartialLogout)</option>
+            <option value="urn:oasis:names:tc:SAML:2.0:status:Requester">Requester Error (urn:oasis:names:tc:SAML:2.0:status:Requester)</option>
+            <option value="urn:oasis:names:tc:SAML:2.0:status:Responder">Responder Error (urn:oasis:names:tc:SAML:2.0:status:Responder)</option>
+          </select>
+        </div>
+
+        <div class="field-row">
+          <label class="form-label" for="resp-status-msg">Status Message (Optional):</label>
+          <input type="text" id="resp-status-msg" class="form-input" placeholder="e.g. Session successfully terminated">
+        </div>
+
+        <div class="field-row">
+          <label class="form-label" for="chk-sign-response">XML Digital Signature:</label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="chk-sign-response" checked style="cursor: pointer;">
+            <label for="chk-sign-response" style="cursor: pointer; color: var(--text-secondary);">Sign &lt;samlp:LogoutResponse&gt; with RSA-SHA256</label>
+          </div>
+        </div>
+
+        <!-- Manual Submission Buttons -->
+        <div style="margin-top: 20px; padding: 16px; background: var(--bg-subtle); border-radius: 6px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 12px;">
+          <div style="font-weight: 600; color: var(--text);">Submit LogoutResponse to Service Provider</div>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" id="btn-submit-post">
+              Submit via HTTP-POST &rarr;
+            </button>
+            <button type="button" class="btn" id="btn-submit-redirect">
+              Submit via HTTP-Redirect &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 3: Generated LogoutResponse XML & Base64 Preview -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">3. Generated LogoutResponse Payload</div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-sm" id="btn-copy-xml">Copy XML</button>
+          <button type="button" class="btn btn-sm" id="btn-copy-b64">Copy Base64</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <label class="form-label">Signed SAML LogoutResponse XML:</label>
+        <pre class="code-box" id="resp-xml-preview" style="max-height: 250px;"></pre>
+
+        <label class="form-label" style="margin-top: 14px;">Base64 Encoded SAMLResponse:</label>
+        <textarea id="resp-b64-preview" class="form-input" rows="3" readonly style="font-family: var(--font-mono); font-size: 11px;"></textarea>
+      </div>
+    </section>
+  </main>
+
+  <!-- Hidden Form for Manual HTTP-POST Submission -->
+  <form id="saml-post-form" method="POST" action="" style="display: none;">
+    <input type="hidden" name="SAMLResponse" id="post-saml-response" value="">
+    <input type="hidden" name="RelayState" id="post-relay-state" value="">
+  </form>
+
+  <script type="module">
+    import { DEFAULT_KEY_PAIR, importPrivateKey } from '/js/crypto-keys.js';
+    import { parseCurrentUrlParams } from '/js/saml-parser.js';
+    import { buildSamlLogoutResponse } from '/js/saml-builder.js';
+
+    let importedKey = null;
+    let latestGeneratedResponse = null;
+
+    const state = {
+      issuer: 'https://sp.example.com/saml/metadata',
+      nameId: 'user@example.com',
+      sessionIndex: '',
+      inResponseTo: '',
+      relayState: '',
+      destination: 'https://sp.example.com/saml/slo',
+      statusCode: 'urn:oasis:names:tc:SAML:2.0:status:Success',
+      statusMessage: '',
+      signResponse: true
+    };
+
+    async function init() {
+      // Setup Theme toggle
+      const btnTheme = document.getElementById('btn-toggle-theme');
+      if (btnTheme) {
+        btnTheme.addEventListener('click', () => {
+          const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+          const next = isLight ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('theme', next);
+        });
+      }
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+
+      // Import default RSA Private Key
+      try {
+        importedKey = await importPrivateKey(DEFAULT_KEY_PAIR.privateKeyPkcs8Pem);
+      } catch (err) {
+        console.error('Failed to import private key:', err);
+      }
+
+      // Parse URL parameters (?SAMLRequest=... / ?RelayState=... / ?login_hint=...)
+      const urlInfo = await parseCurrentUrlParams();
+
+      if (urlInfo.isLogoutRequest && urlInfo.parsedLogoutRequest) {
+        const req = urlInfo.parsedLogoutRequest;
+        state.issuer = req.issuer || state.issuer;
+        state.nameId = req.nameId || state.nameId;
+        state.sessionIndex = req.sessionIndex || '';
+        state.inResponseTo = req.id || '';
+        state.relayState = urlInfo.relayState || '';
+        if (req.destination) {
+          state.destination = req.destination;
+        }
+
+        // Show banner & update badge
+        const banner = document.getElementById('slo-banner');
+        if (banner) {
+          banner.style.display = 'flex';
+          document.getElementById('slo-banner-text').textContent = `Incoming LogoutRequest detected from ${state.issuer}`;
+        }
+        const badge = document.getElementById('request-status-badge');
+        badge.className = 'badge badge-info';
+        badge.textContent = 'Active SP Request';
+        document.getElementById('no-request-message').style.display = 'none';
+
+        // Set raw XML
+        document.getElementById('raw-req-xml').textContent = req.rawXml;
+        document.getElementById('raw-req-container').style.display = 'block';
+      } else if (urlInfo.loginHint) {
+        state.nameId = urlInfo.loginHint;
+      }
+
+      // Populate input fields
+      document.getElementById('req-issuer').value = state.issuer;
+      document.getElementById('req-nameid').value = state.nameId;
+      document.getElementById('req-session-index').value = state.sessionIndex;
+      document.getElementById('req-id').value = state.inResponseTo;
+      document.getElementById('req-relay-state').value = state.relayState;
+      document.getElementById('resp-destination').value = state.destination;
+
+      // Event Listeners
+      const inputs = [
+        'req-issuer', 'req-nameid', 'req-session-index', 'req-id',
+        'req-relay-state', 'resp-destination', 'resp-status', 'resp-status-msg'
+      ];
+      inputs.forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => {
+          syncStateFromUi();
+          regenerateResponse();
+        });
+      });
+      document.getElementById('chk-sign-response')?.addEventListener('change', (e) => {
+        state.signResponse = e.target.checked;
+        regenerateResponse();
+      });
+
+      document.getElementById('btn-load-sample-SP-logout')?.addEventListener('click', loadSampleRequest);
+      document.getElementById('btn-load-sample-req')?.addEventListener('click', loadSampleRequest);
+      document.getElementById('btn-toggle-raw-req')?.addEventListener('click', () => {
+        const box = document.getElementById('raw-req-container');
+        box.style.display = box.style.display === 'none' ? 'block' : 'none';
+      });
+
+      document.getElementById('btn-submit-post')?.addEventListener('click', submitPost);
+      document.getElementById('btn-submit-redirect')?.addEventListener('click', submitRedirect);
+      document.getElementById('btn-copy-xml')?.addEventListener('click', () => copyToClipboard('resp-xml-preview', 'btn-copy-xml', 'XML Copied!'));
+      document.getElementById('btn-copy-b64')?.addEventListener('click', () => copyToClipboard('resp-b64-preview', 'btn-copy-b64', 'Base64 Copied!'));
+
+      await regenerateResponse();
+    }
+
+    function syncStateFromUi() {
+      state.issuer = document.getElementById('req-issuer').value.trim();
+      state.nameId = document.getElementById('req-nameid').value.trim();
+      state.sessionIndex = document.getElementById('req-session-index').value.trim();
+      state.inResponseTo = document.getElementById('req-id').value.trim();
+      state.relayState = document.getElementById('req-relay-state').value.trim();
+      state.destination = document.getElementById('resp-destination').value.trim();
+      state.statusCode = document.getElementById('resp-status').value;
+      state.statusMessage = document.getElementById('resp-status-msg').value.trim();
+      state.signResponse = document.getElementById('chk-sign-response').checked;
+    }
+
+    async function regenerateResponse() {
+      try {
+        const res = await buildSamlLogoutResponse({
+          destination: state.destination,
+          inResponseTo: state.inResponseTo,
+          idpEntityId: 'https://fake-saml-idp.pages.dev/saml/idp',
+          statusCode: state.statusCode,
+          statusMessage: state.statusMessage,
+          signResponse: state.signResponse,
+          privateKey: importedKey,
+          certPem: DEFAULT_KEY_PAIR.certificatePem
+        });
+
+        latestGeneratedResponse = res;
+        document.getElementById('resp-xml-preview').textContent = res.xmlString;
+        document.getElementById('resp-b64-preview').value = res.base64Response;
+      } catch (err) {
+        console.error('Failed to generate LogoutResponse:', err);
+      }
+    }
+
+    function loadSampleRequest() {
+      state.issuer = 'https://sp.example.com/saml/metadata';
+      state.nameId = 'jane.doe@company.com';
+      state.sessionIndex = '_sess_' + Math.random().toString(36).substring(2, 10);
+      state.inResponseTo = '_req_logout_' + Math.random().toString(36).substring(2, 10);
+      state.destination = 'https://sp.example.com/saml/slo';
+      state.relayState = 'sample-relay-state-123';
+
+      document.getElementById('req-issuer').value = state.issuer;
+      document.getElementById('req-nameid').value = state.nameId;
+      document.getElementById('req-session-index').value = state.sessionIndex;
+      document.getElementById('req-id').value = state.inResponseTo;
+      document.getElementById('req-relay-state').value = state.relayState;
+      document.getElementById('resp-destination').value = state.destination;
+
+      const sampleXml = `<?xml version="1.0" encoding="UTF-8"?>
+<samlp:LogoutRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
+                     xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
+                     ID="${state.inResponseTo}"
+                     Version="2.0"
+                     IssueInstant="${new Date().toISOString()}"
+                     Destination="https://fake-saml-idp.pages.dev/logout">
+  <saml:Issuer>${state.issuer}</saml:Issuer>
+  <saml:NameID Format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress">${state.nameId}</saml:NameID>
+  <samlp:SessionIndex>${state.sessionIndex}</samlp:SessionIndex>
+</samlp:LogoutRequest>`;
+
+      document.getElementById('raw-req-xml').textContent = sampleXml;
+      document.getElementById('raw-req-container').style.display = 'block';
+      document.getElementById('no-request-message').style.display = 'none';
+      const badge = document.getElementById('request-status-badge');
+      badge.className = 'badge badge-info';
+      badge.textContent = 'Simulated SP Request';
+
+      regenerateResponse();
+    }
+
+    function submitPost() {
+      if (!latestGeneratedResponse) return;
+      syncStateFromUi();
+
+      if (!state.destination) {
+        alert('Please specify an SP Return URL (Destination).');
+        return;
+      }
+
+      const form = document.getElementById('saml-post-form');
+      form.action = state.destination;
+      document.getElementById('post-saml-response').value = latestGeneratedResponse.base64Response;
+      document.getElementById('post-relay-state').value = state.relayState;
+
+      form.submit();
+    }
+
+    function submitRedirect() {
+      if (!latestGeneratedResponse) return;
+      syncStateFromUi();
+
+      if (!state.destination) {
+        alert('Please specify an SP Return URL (Destination).');
+        return;
+      }
+
+      const url = new URL(state.destination, window.location.href);
+      url.searchParams.set('SAMLResponse', latestGeneratedResponse.base64Response);
+      if (state.relayState) {
+        url.searchParams.set('RelayState', state.relayState);
+      }
+      window.location.href = url.toString();
+    }
+
+    function copyToClipboard(elementId, buttonId, successText) {
+      const el = document.getElementById(elementId);
+      const val = el.value || el.textContent;
+      navigator.clipboard.writeText(val).then(() => {
+        const btn = document.getElementById(buttonId);
+        const originalText = btn.textContent;
+        btn.textContent = successText;
+        setTimeout(() => { btn.textContent = originalText; }, 2000);
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>

@@ -308,3 +308,62 @@ export function formatXml(xml, indent = '  ') {
   return formatted.trim();
 }
 
+/**
+ * Builds and signs a SAML 2.0 LogoutResponse XML Document
+ */
+export async function buildSamlLogoutResponse({
+  destination = '',
+  idpEntityId = 'https://fake-saml-idp.pages.dev/saml/idp',
+  inResponseTo = '',
+  statusCode = 'urn:oasis:names:tc:SAML:2.0:status:Success',
+  statusMessage = '',
+  responseId = null,
+  issueInstant = null,
+  signResponse = true,
+  privateKey = null,
+  certPem = null
+}) {
+  const respId = responseId || generateId('_resp_');
+  const nowUtc = issueInstant || toIsoUtcString(new Date());
+
+  const destinationAttr = destination ? ` Destination="${escapeXml(destination)}"` : '';
+  const inResponseToAttr = inResponseTo ? ` InResponseTo="${escapeXml(inResponseTo)}"` : '';
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<samlp:LogoutResponse xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="${respId}" Version="2.0" IssueInstant="${nowUtc}"${destinationAttr}${inResponseToAttr}>
+  <saml:Issuer>${escapeXml(idpEntityId)}</saml:Issuer>
+  <samlp:Status>
+    <samlp:StatusCode Value="${escapeXml(statusCode)}"/>${statusMessage ? `\n    <samlp:StatusMessage>${escapeXml(statusMessage)}</samlp:StatusMessage>` : ''}
+  </samlp:Status>
+</samlp:LogoutResponse>`;
+
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xml, 'application/xml');
+
+  if (signResponse && privateKey && certPem) {
+    const root = xmlDoc.documentElement;
+    await signXmlElement({
+      xmlDoc,
+      targetElement: root,
+      targetId: respId,
+      privateKey,
+      certPem,
+      insertLocation: 'afterIssuer'
+    });
+  }
+
+  const finalXmlString = new XMLSerializer().serializeToString(xmlDoc);
+  const base64Response = btoa(unescape(encodeURIComponent(finalXmlString)));
+
+  return {
+    xmlDoc,
+    xmlString: formatXml(finalXmlString),
+    rawXmlString: finalXmlString,
+    base64Response,
+    responseId: respId,
+    inResponseTo,
+    destination,
+    statusCode
+  };
+}
+

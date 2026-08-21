@@ -170,6 +170,59 @@ export function parseAuthnRequestXml(xmlString) {
 }
 
 /**
+ * Parses XML string and extracts SAML LogoutRequest parameters
+ */
+export function parseLogoutRequestXml(xmlString) {
+  if (!xmlString) return null;
+
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlString, 'application/xml');
+
+  // Check for parser errors
+  const parseError = xmlDoc.getElementsByTagName('parsererror')[0];
+  if (parseError) {
+    throw new Error('Invalid XML in LogoutRequest: ' + parseError.textContent);
+  }
+
+  const root = xmlDoc.documentElement;
+  const isLogoutRequest = root.localName === 'LogoutRequest' || root.tagName.endsWith('LogoutRequest');
+
+  // Extract Attributes
+  const id = root.getAttribute('ID') || '';
+  const version = root.getAttribute('Version') || '2.0';
+  const issueInstant = root.getAttribute('IssueInstant') || '';
+  const destination = root.getAttribute('Destination') || '';
+  const notOnOrAfter = root.getAttribute('NotOnOrAfter') || '';
+
+  // Extract Issuer
+  const issuerElem = xmlDoc.getElementsByTagNameNS('*', 'Issuer')[0];
+  const issuer = issuerElem ? issuerElem.textContent.trim() : '';
+
+  // Extract Subject / NameID
+  const nameIdElem = xmlDoc.getElementsByTagNameNS('*', 'NameID')[0];
+  const nameId = nameIdElem ? nameIdElem.textContent.trim() : '';
+  const nameIdFormat = nameIdElem ? nameIdElem.getAttribute('Format') || '' : '';
+
+  // Extract SessionIndex
+  const sessionIndexElem = xmlDoc.getElementsByTagNameNS('*', 'SessionIndex')[0];
+  const sessionIndex = sessionIndexElem ? sessionIndexElem.textContent.trim() : '';
+
+  return {
+    rawXml: xmlString,
+    isLogoutRequest,
+    id,
+    version,
+    issueInstant,
+    destination,
+    notOnOrAfter,
+    issuer,
+    nameId,
+    nameIdFormat,
+    sessionIndex
+  };
+}
+
+/**
  * Parses current page URL query string for SSO parameters & login_hint
  */
 export async function parseCurrentUrlParams(searchString = (typeof window !== 'undefined' && window.location ? window.location.search : '')) {
@@ -191,12 +244,19 @@ export async function parseCurrentUrlParams(searchString = (typeof window !== 'u
   const loginHint = matchedParam ? urlParams.get(matchedParam) : '';
 
   let parsedRequest = null;
+  let parsedLogoutRequest = null;
+  let isLogoutRequest = false;
   let parseError = null;
 
   if (samlRequestRaw) {
     try {
       const xml = await decodeSamlRequest(samlRequestRaw);
-      parsedRequest = parseAuthnRequestXml(xml);
+      if (xml.includes('LogoutRequest')) {
+        parsedLogoutRequest = parseLogoutRequestXml(xml);
+        isLogoutRequest = true;
+      } else {
+        parsedRequest = parseAuthnRequestXml(xml);
+      }
     } catch (err) {
       console.error('Failed to parse incoming SAMLRequest:', err);
       parseError = err.message;
@@ -210,6 +270,9 @@ export async function parseCurrentUrlParams(searchString = (typeof window !== 'u
   if (!effectiveLoginHint && parsedRequest && parsedRequest.requestedSubject) {
     effectiveLoginHint = parsedRequest.requestedSubject;
     loginHintSource = 'SAML AuthnRequest (<saml:Subject>)';
+  } else if (!effectiveLoginHint && parsedLogoutRequest && parsedLogoutRequest.nameId) {
+    effectiveLoginHint = parsedLogoutRequest.nameId;
+    loginHintSource = 'SAML LogoutRequest (<saml:NameID>)';
   }
 
   return {
@@ -220,7 +283,9 @@ export async function parseCurrentUrlParams(searchString = (typeof window !== 'u
     signature,
     loginHint: effectiveLoginHint,
     loginHintSource,
+    isLogoutRequest,
     parsedRequest,
+    parsedLogoutRequest,
     parseError
   };
 }
