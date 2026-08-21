@@ -46,16 +46,20 @@ This document provides architectural context, design constraints, and developer 
 ### A. SAML 2.0 Response & DBSC XML Generation (`public/js/saml-builder.js`)
 - **Assertion Envelope & Signature Location**:
   - The XML digital signature (`<ds:Signature>`) MUST directly follow the `<saml:Issuer>` element according to SAML 2.0 core specifications (`saml-core-2.0-os`).
+  - Both `<samlp:Response>` and `<saml:Assertion>` are signed by default (`signAssertion: true, signResponse: true`).
 - **W3C DBSC SAML Extension Schema**:
   - Namespace: `xmlns:dbsc="https://www.w3.org/ns/dbsc/saml"` ([W3C Schema](https://www.w3.org/ns/dbsc/saml/dbsc-saml.xsd)).
   - Supported elements:
-    - `<dbsc:TrustedKey digest="..." digest_alg="SHA-256|SHA-384|SHA-512"/>`
-    - `<dbsc:TrustedCertificate fingerprint="..." fingerprint_alg="SHA-256|SHA-384|SHA-512"/>`
-  - Placed inside `<saml:Advice>` directly following `<saml:AuthnStatement>` / `<saml:AttributeStatement>`.
+    - `<dbsc:TrustedKey digest="..." digest_alg="SHA-256|SHA-384|SHA-512"/>` (unpadded Base64URL `digest`)
+    - `<dbsc:TrustedCertificate fingerprint="..." fingerprint_alg="SHA-256|SHA-384|SHA-512"/>` (unpadded Base64URL `fingerprint`)
+  - Placed inside `<saml:Advice>` directly preceding `<saml:AuthnStatement>` per `saml-schema-assertion-2.0.xsd`.
+- **SubjectConfirmationData Validity**:
+  - `SubjectConfirmationData@NotOnOrAfter` is constrained to 5 minutes to prevent replay attacks, while `Conditions@NotOnOrAfter` governs the overall session validity (default 60 minutes).
 
 ### B. Canonicalization & XMLDSig Signing (`public/js/xml-signer.js`)
 - **Exclusive XML Canonicalization (`c14n-exc`)**:
   - Implements `http://www.w3.org/2001/10/xml-exc-c14n#`.
+  - In-scope namespaces from ancestor elements are resolved so that visibly utilized prefixes on canonicalized subtrees (like `<saml:Assertion>`) receive their appropriate namespace declarations.
   - Sorts namespaces lexicographically (unprefixed `xmlns` first, followed by prefixed declarations).
   - Sorts attributes lexicographically (unprefixed first, then by prefix/name).
   - Supports signing both `<saml:Assertion>` (default standard) and the enclosing `<samlp:Response>`.

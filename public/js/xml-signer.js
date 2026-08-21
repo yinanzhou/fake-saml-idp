@@ -24,7 +24,34 @@ function escapeText(str) {
 }
 
 /**
+ * Returns a map of all in-scope namespace prefix -> URI bindings for a given DOM element node.
+ */
+export function getInScopeNamespaces(node) {
+  const inScope = {};
+  const chain = [];
+  let curr = node;
+  while (curr && curr.nodeType === 1) { // ELEMENT_NODE
+    chain.unshift(curr);
+    curr = curr.parentNode;
+  }
+  for (const elem of chain) {
+    if (elem.attributes) {
+      for (let i = 0; i < elem.attributes.length; i++) {
+        const attr = elem.attributes[i];
+        if (attr.name === 'xmlns') {
+          inScope[''] = attr.value;
+        } else if (attr.name.startsWith('xmlns:')) {
+          inScope[attr.name.substring(6)] = attr.value;
+        }
+      }
+    }
+  }
+  return inScope;
+}
+
+/**
  * W3C Exclusive XML Canonicalization (c14n-exc)
+ * Specification: http://www.w3.org/2001/10/xml-exc-c14n#
  */
 export function canonicalize(node, renderedNamespaces = {}, inclusiveNamespaces = []) {
   if (!node) return '';
@@ -48,63 +75,62 @@ export function canonicalize(node, renderedNamespaces = {}, inclusiveNamespaces 
   if (node.nodeType === 1) {
     let result = '<' + node.tagName;
 
-    const localNamespaces = {};
-    const attrs = [];
+    const inScope = getInScopeNamespaces(node);
+    const visiblyUtilized = new Set();
+    const regularAttrs = [];
 
-    // Separate namespace declarations and regular attributes
+    // 1. Identify element tag prefix
+    const elemPrefix = node.tagName.includes(':') ? node.tagName.split(':')[0] : '';
+    visiblyUtilized.add(elemPrefix);
+
+    // 2. Identify regular attributes and their prefixes
     if (node.attributes) {
       for (let i = 0; i < node.attributes.length; i++) {
         const attr = node.attributes[i];
-        if (attr.name === 'xmlns') {
-          localNamespaces[''] = attr.value;
-        } else if (attr.name.startsWith('xmlns:')) {
-          const prefix = attr.name.substring(6);
-          localNamespaces[prefix] = attr.value;
-        } else {
-          attrs.push(attr);
+        if (attr.name === 'xmlns' || attr.name.startsWith('xmlns:')) {
+          continue;
         }
+        regularAttrs.push(attr);
+        if (attr.name.includes(':')) {
+          const attrPrefix = attr.name.split(':')[0];
+          if (attrPrefix !== 'xml') {
+            visiblyUtilized.add(attrPrefix);
+          }
+        }
+      }
+    }
+
+    // 3. Inclusive namespaces prefix list (if specified)
+    if (Array.isArray(inclusiveNamespaces)) {
+      for (const p of inclusiveNamespaces) {
+        visiblyUtilized.add(p === '#default' ? '' : p);
       }
     }
 
     const currentRendered = { ...renderedNamespaces };
     const nsToRender = [];
 
-    // Determine element prefix and namespace
-    const elemPrefix = node.tagName.includes(':') ? node.tagName.split(':')[0] : '';
-    
-    // Check if element prefix namespace needs to be rendered
-    if (elemPrefix === '') {
-      if (localNamespaces[''] !== undefined && localNamespaces[''] !== renderedNamespaces['']) {
-        nsToRender.push({ name: 'xmlns', value: localNamespaces[''], prefix: '' });
-        currentRendered[''] = localNamespaces[''];
-      }
-    } else {
-      const nsVal = localNamespaces[elemPrefix] || renderedNamespaces[elemPrefix];
-      if (nsVal !== undefined && renderedNamespaces[elemPrefix] !== nsVal) {
-        nsToRender.push({ name: 'xmlns:' + elemPrefix, value: nsVal, prefix: elemPrefix });
-        currentRendered[elemPrefix] = nsVal;
-      }
-    }
+    // 4. Render only visibly utilized namespaces that have not been rendered with same URI in ancestor scope
+    for (const p of visiblyUtilized) {
+      const uri = inScope[p] !== undefined
+        ? inScope[p]
+        : (node.lookupNamespaceURI ? (p === '' ? (node.lookupNamespaceURI(null) || '') : (node.lookupNamespaceURI(p) || '')) : '');
 
-    // Check attribute prefixes
-    for (const attr of attrs) {
-      if (attr.name.includes(':')) {
-        const p = attr.name.split(':')[0];
-        if (p !== 'xml') {
-          const nsVal = localNamespaces[p] || renderedNamespaces[p];
-          if (nsVal !== undefined && currentRendered[p] !== nsVal) {
-            nsToRender.push({ name: 'xmlns:' + p, value: nsVal, prefix: p });
-            currentRendered[p] = nsVal;
-          }
+      if (p === '') {
+        // Default namespace
+        if (uri && currentRendered[''] !== uri) {
+          nsToRender.push({ name: 'xmlns', prefix: '', value: uri });
+          currentRendered[''] = uri;
+        } else if (!uri && currentRendered['']) {
+          nsToRender.push({ name: 'xmlns', prefix: '', value: '' });
+          currentRendered[''] = '';
         }
-      }
-    }
-
-    // Check inclusive / declared local namespaces on this element
-    for (const [p, uri] of Object.entries(localNamespaces)) {
-      if (!nsToRender.some(n => n.prefix === p) && currentRendered[p] !== uri) {
-        nsToRender.push({ name: p === '' ? 'xmlns' : 'xmlns:' + p, value: uri, prefix: p });
-        currentRendered[p] = uri;
+      } else {
+        // Prefixed namespace
+        if (uri && currentRendered[p] !== uri) {
+          nsToRender.push({ name: 'xmlns:' + p, prefix: p, value: uri });
+          currentRendered[p] = uri;
+        }
       }
     }
 
@@ -119,16 +145,28 @@ export function canonicalize(node, renderedNamespaces = {}, inclusiveNamespaces 
       result += ' ' + ns.name + '="' + escapeAttr(ns.value) + '"';
     }
 
-    // Sort attributes: unprefixed first, then by namespace URI / prefix, then by local name
-    attrs.sort((a, b) => {
-      const aPrefix = a.name.includes(':') ? a.name.split(':')[0] : '';
-      const bPrefix = b.name.includes(':') ? b.name.split(':')[0] : '';
-      if (aPrefix === '' && bPrefix !== '') return -1;
-      if (aPrefix !== '' && bPrefix === '') return 1;
-      return a.name.localeCompare(b.name);
+    // Sort regular attributes: unprefixed first, then by namespace URI, then by local name
+    regularAttrs.sort((a, b) => {
+      const aHasPrefix = a.name.includes(':');
+      const bHasPrefix = b.name.includes(':');
+      if (!aHasPrefix && bHasPrefix) return -1;
+      if (aHasPrefix && !bHasPrefix) return 1;
+      if (!aHasPrefix && !bHasPrefix) {
+        return a.name.localeCompare(b.name);
+      }
+      const aPrefix = a.name.split(':')[0];
+      const bPrefix = b.name.split(':')[0];
+      const aLocal = a.name.split(':')[1];
+      const bLocal = b.name.split(':')[1];
+      const aNs = inScope[aPrefix] || '';
+      const bNs = inScope[bPrefix] || '';
+      if (aNs !== bNs) {
+        return aNs.localeCompare(bNs);
+      }
+      return aLocal.localeCompare(bLocal);
     });
 
-    for (const attr of attrs) {
+    for (const attr of regularAttrs) {
       result += ' ' + attr.name + '="' + escapeAttr(attr.value) + '"';
     }
 
@@ -157,7 +195,8 @@ export function canonicalize(node, renderedNamespaces = {}, inclusiveNamespaces 
 export async function computeXmlDigest(canonicalXml) {
   const encoder = new TextEncoder();
   const data = encoder.encode(canonicalXml);
-  const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+  const cryptoObj = (typeof window !== 'undefined' && window.crypto) ? window.crypto : globalThis.crypto;
+  const hashBuffer = await cryptoObj.subtle.digest('SHA-256', data);
   return arrayBufferToBase64(hashBuffer);
 }
 
@@ -174,11 +213,16 @@ export async function signXmlElement({
 }) {
   const certB64 = pemToBase64(certPem);
 
-  // 1. Remove any existing ds:Signature inside targetElement to prepare for clean canonicalization
-  const existingSig = targetElement.getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#', 'Signature')[0]
-    || targetElement.querySelector('Signature');
-  if (existingSig && existingSig.parentNode === targetElement) {
-    targetElement.removeChild(existingSig);
+  // 1. Remove any existing ds:Signature directly inside targetElement to prepare for clean canonicalization
+  const existingSigs = [];
+  for (let i = 0; i < targetElement.childNodes.length; i++) {
+    const child = targetElement.childNodes[i];
+    if (child.nodeType === 1 && (child.localName === 'Signature' || child.tagName === 'ds:Signature' || child.tagName === 'Signature')) {
+      existingSigs.push(child);
+    }
+  }
+  for (const sig of existingSigs) {
+    targetElement.removeChild(sig);
   }
 
   // 2. Canonicalize target element to calculate DigestValue
@@ -194,7 +238,8 @@ export async function signXmlElement({
 
   // 4. Sign the canonical SignedInfo with RSA private key
   const encoder = new TextEncoder();
-  const signatureBuffer = await window.crypto.subtle.sign(
+  const cryptoObj = (typeof window !== 'undefined' && window.crypto) ? window.crypto : globalThis.crypto;
+  const signatureBuffer = await cryptoObj.subtle.sign(
     'RSASSA-PKCS1-v1_5',
     privateKey,
     encoder.encode(canonicalSignedInfo)
@@ -209,7 +254,14 @@ export async function signXmlElement({
 
   // 6. Insert Signature in schema-compliant location
   if (insertLocation === 'afterIssuer') {
-    const issuer = targetElement.getElementsByTagNameNS('*', 'Issuer')[0];
+    let issuer = null;
+    for (let i = 0; i < targetElement.childNodes.length; i++) {
+      const child = targetElement.childNodes[i];
+      if (child.nodeType === 1 && (child.localName === 'Issuer' || child.tagName.endsWith(':Issuer') || child.tagName === 'Issuer')) {
+        issuer = child;
+        break;
+      }
+    }
     if (issuer && issuer.nextSibling) {
       targetElement.insertBefore(importedSig, issuer.nextSibling);
     } else {
@@ -221,3 +273,4 @@ export async function signXmlElement({
 
   return importedSig;
 }
+

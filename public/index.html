@@ -268,7 +268,7 @@
           </label>
         </div>
         <p class="card-desc">
-          Assert cryptographic key digests and certificate fingerprints bound to the user's client device per the W3C DBSC specification (<code>xmlns:dbsc="https://www.w3.org/NS/DBSC"</code>).
+          Assert cryptographic key digests and certificate fingerprints bound to the user's client device per the W3C DBSC specification (<code>xmlns:dbsc="https://www.w3.org/ns/dbsc/saml"</code>) formatted as unpadded Base64URL.
         </p>
 
         <div id="dbsc-details-container" style="display: none;">
@@ -342,7 +342,7 @@
               <strong>Sign &lt;saml:Assertion&gt; (Standard)</strong>
             </label>
             <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
-              <input type="checkbox" id="sign-response-toggle">
+              <input type="checkbox" id="sign-response-toggle" checked>
               <strong>Sign &lt;samlp:Response&gt;</strong>
             </label>
           </div>

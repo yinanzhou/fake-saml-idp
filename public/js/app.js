@@ -55,7 +55,7 @@ const state = {
   },
   importedPrivateKey: null,
   signAssertion: true,
-  signResponse: false,
+  signResponse: true,
 
   // Generated Response Output
   lastGenerated: null,
@@ -341,7 +341,7 @@ function renderDbscSection() {
       <div class="dbsc-item">
         <div style="flex: 2;">
           <label class="form-label" style="font-size: 10px;">dbsc:TrustedKey @digest</label>
-          <input type="text" class="form-input code-font dbsc-key-digest" data-index="${idx}" value="${escapeHtml(k.digest)}" placeholder="e.g. nZgxCylNy7jXvn4+j0DykE+TDK4W41LTffxei29e/G0=">
+          <input type="text" class="form-input code-font dbsc-key-digest" data-index="${idx}" value="${escapeHtml(k.digest)}" placeholder="e.g. nZgxCylNy7jXvn4-j0DykE-TDK4W41LTffxei29e_G0">
         </div>
         <div style="flex: 1;">
           <label class="form-label" style="font-size: 10px;">@digest_alg</label>
@@ -368,7 +368,7 @@ function renderDbscSection() {
       <div class="dbsc-item">
         <div style="flex: 2;">
           <label class="form-label" style="font-size: 10px;">dbsc:TrustedCertificate @fingerprint</label>
-          <input type="text" class="form-input code-font dbsc-cert-fp" data-index="${idx}" value="${escapeHtml(c.fingerprint)}" placeholder="e.g. f3e9619a9d701a52701469e4f83d32847b2374e2593f66d48b788647097c234b">
+          <input type="text" class="form-input code-font dbsc-cert-fp" data-index="${idx}" value="${escapeHtml(c.fingerprint)}" placeholder="e.g. 8-lhmp1wGlJwFGnk-D0yhHsjdOJZP2bUi3iGRwl8I0s">
         </div>
         <div style="flex: 1;">
           <label class="form-label" style="font-size: 10px;">@fingerprint_alg</label>
@@ -530,6 +530,16 @@ function applyPreset(presetId, autoUpdate = true, options = {}) {
     state.dbsc = JSON.parse(JSON.stringify(preset.dbsc));
   } else {
     state.dbsc = { enabled: false, keys: [], certificates: [] };
+  }
+
+  // Update SP Entity ID and ACS URL from preset if this is an IdP-initiated session (no incoming SAMLRequest)
+  if (!state.hasIncomingRequest) {
+    if (preset.defaultSpEntityId) {
+      state.spEntityId = preset.defaultSpEntityId;
+    }
+    if (preset.defaultAcsUrl) {
+      state.acsUrl = preset.defaultAcsUrl;
+    }
   }
 
   // Synchronize preset selector dropdown

@@ -9,6 +9,8 @@ export const PRESETS = [
     description: 'Standard enterprise profile with email, full name, roles and groups.',
     nameId: 'user@example.com',
     nameIdFormat: 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
+    defaultSpEntityId: 'https://sp.example.com/saml/metadata',
+    defaultAcsUrl: 'https://sp.example.com/saml/acs',
     attributes: [
       { name: 'email', nameFormat: 'urn:oasis:names:tc:SAML:2.0:attrname-format:basic', values: ['user@example.com'] },
       { name: 'firstName', nameFormat: 'urn:oasis:names:tc:SAML:2.0:attrname-format:basic', values: ['Jane'] },
@@ -30,6 +32,8 @@ export const PRESETS = [
     description: 'Includes <saml:Advice> with dbsc:TrustedKey and dbsc:TrustedCertificate.',
     nameId: 'device-bound-user@example.com',
     nameIdFormat: 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
+    defaultSpEntityId: 'https://sp.example.com/saml/metadata',
+    defaultAcsUrl: 'https://sp.example.com/saml/acs',
     attributes: [
       { name: 'email', nameFormat: 'urn:oasis:names:tc:SAML:2.0:attrname-format:basic', values: ['device-bound-user@example.com'] },
       { name: 'firstName', nameFormat: 'urn:oasis:names:tc:SAML:2.0:attrname-format:basic', values: ['Alice'] },
@@ -40,13 +44,13 @@ export const PRESETS = [
       enabled: true,
       keys: [
         {
-          digest: 'nZgxCylNy7jXvn4+j0DykE+TDK4W41LTffxei29e/G0=',
+          digest: 'nZgxCylNy7jXvn4-j0DykE-TDK4W41LTffxei29e_G0',
           digestAlg: 'SHA-256'
         }
       ],
       certificates: [
         {
-          fingerprint: 'f3e9619a9d701a52701469e4f83d32847b2374e2593f66d48b788647097c234b',
+          fingerprint: '8-lhmp1wGlJwFGnk-D0yhHsjdOJZP2bUi3iGRwl8I0s',
           fingerprintAlg: 'SHA-256'
         }
       ]
@@ -58,6 +62,8 @@ export const PRESETS = [
     description: 'Google Workspace SAML assertions with email, first_name, and last_name.',
     nameId: 'user@company.com',
     nameIdFormat: 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
+    defaultSpEntityId: 'google.com',
+    defaultAcsUrl: 'https://www.google.com/a/company.com/acs',
     attributes: [
       { name: 'email', nameFormat: 'urn:oasis:names:tc:SAML:2.0:attrname-format:basic', values: ['user@company.com'] },
       { name: 'primary_email', nameFormat: 'urn:oasis:names:tc:SAML:2.0:attrname-format:basic', values: ['user@company.com'] },
@@ -72,6 +78,8 @@ export const PRESETS = [
     description: 'Full schema URN claims used by Microsoft Entra ID.',
     nameId: 'admin@tenant.onmicrosoft.com',
     nameIdFormat: 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent',
+    defaultSpEntityId: 'https://sts.windows.net/tenant-id/',
+    defaultAcsUrl: 'https://login.microsoftonline.com/login.srf',
     attributes: [
       { name: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name', nameFormat: 'urn:oasis:names:tc:SAML:2.0:attrname-format:uri', values: ['admin@tenant.onmicrosoft.com'] },
       { name: 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress', nameFormat: 'urn:oasis:names:tc:SAML:2.0:attrname-format:uri', values: ['admin@tenant.onmicrosoft.com'] },
@@ -88,6 +96,8 @@ export const PRESETS = [
     description: 'AWS IAM SAML attributes for assume role (Role, RoleSessionName, SessionDuration).',
     nameId: 'aws-admin@example.com',
     nameIdFormat: 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent',
+    defaultSpEntityId: 'https://signin.aws.amazon.com/saml',
+    defaultAcsUrl: 'https://signin.aws.amazon.com/saml',
     attributes: [
       {
         name: 'https://aws.amazon.com/SAML/Attributes/Role',
@@ -166,4 +176,5 @@ export function detectSmartPreset(spEntityId = '', acsUrl = '', searchString = '
 
   return 'default';
 }
+
 

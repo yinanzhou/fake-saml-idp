@@ -100,13 +100,15 @@ export function base64ToPem(b64, type = 'CERTIFICATE') {
   return `-----BEGIN ${type}-----\n${formatted}\n-----END ${type}-----`;
 }
 
+const getCrypto = () => (typeof window !== 'undefined' && window.crypto) ? window.crypto : globalThis.crypto;
+
 /**
  * Imports PKCS#8 RSA Private Key for WebCrypto signing
  */
 export async function importPrivateKey(pkcs8Pem) {
   try {
     const keyData = pemToArrayBuffer(pkcs8Pem);
-    return await window.crypto.subtle.importKey(
+    return await getCrypto().subtle.importKey(
       'pkcs8',
       keyData,
       {
@@ -128,7 +130,7 @@ export async function importPrivateKey(pkcs8Pem) {
 export async function computeCertFingerprint(certPem) {
   try {
     const certBuffer = pemToArrayBuffer(certPem);
-    const hashBuffer = await window.crypto.subtle.digest('SHA-256', certBuffer);
+    const hashBuffer = await getCrypto().subtle.digest('SHA-256', certBuffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(':');
   } catch (err) {
@@ -211,7 +213,7 @@ function asn1UTCTime(date) {
  */
 export async function generateNewKeypair(commonName = 'fake-saml-idp.pages.dev', validityYears = 10) {
   // 1. Generate RSA keypair
-  const keyPair = await window.crypto.subtle.generateKey(
+  const keyPair = await getCrypto().subtle.generateKey(
     {
       name: 'RSASSA-PKCS1-v1_5',
       modulusLength: 2048,
@@ -223,16 +225,16 @@ export async function generateNewKeypair(commonName = 'fake-saml-idp.pages.dev',
   );
 
   // 2. Export PKCS#8 private key
-  const pkcs8Buf = await window.crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
+  const pkcs8Buf = await getCrypto().subtle.exportKey('pkcs8', keyPair.privateKey);
   const privateKeyPem = base64ToPem(arrayBufferToBase64(pkcs8Buf), 'PRIVATE KEY');
 
   // 3. Export SPKI public key
-  const spkiBuf = await window.crypto.subtle.exportKey('spki', keyPair.publicKey);
+  const spkiBuf = await getCrypto().subtle.exportKey('spki', keyPair.publicKey);
   const spkiBytes = new Uint8Array(spkiBuf);
 
   // 4. Construct TBSCertificate (To-Be-Signed Certificate)
   const serialNumber = new Uint8Array(8);
-  window.crypto.getRandomValues(serialNumber);
+  getCrypto().getRandomValues(serialNumber);
 
   const sha256WithRSAEncryption = asn1Sequence([
     asn1ObjectIdentifier('1.2.840.113549.1.1.11'), // sha256WithRSAEncryption
@@ -277,7 +279,7 @@ export async function generateNewKeypair(commonName = 'fake-saml-idp.pages.dev',
 
   // 5. Sign TBSCertificate with private key
   const tbsBuffer = new Uint8Array(tbsCertificate).buffer;
-  const signatureBuffer = await window.crypto.subtle.sign('RSASSA-PKCS1-v1_5', keyPair.privateKey, tbsBuffer);
+  const signatureBuffer = await getCrypto().subtle.sign('RSASSA-PKCS1-v1_5', keyPair.privateKey, tbsBuffer);
   const signatureBytes = new Uint8Array(signatureBuffer);
 
   // 6. Complete X.509 Certificate DER

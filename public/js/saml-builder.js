@@ -20,6 +20,33 @@ export function toIsoUtcString(date = new Date()) {
 }
 
 /**
+ * Normalizes a digest or fingerprint string (Hex or standard Base64) to unpadded Base64URL (RFC 4648 §5)
+ */
+export function toBase64Url(input) {
+  if (!input || typeof input !== 'string') return '';
+  let str = input.trim();
+
+  // If input is hex format (32+ chars, even length, valid hex characters)
+  if (/^[0-9a-fA-F]+$/.test(str) && str.length % 2 === 0 && str.length >= 32) {
+    const match = str.match(/.{1,2}/g);
+    if (match) {
+      const bytes = new Uint8Array(match.map(byte => parseInt(byte, 16)));
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      str = btoa(binary);
+    }
+  }
+
+  // Convert standard Base64 to unpadded Base64URL
+  return str
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+/**
  * Builds and signs a SAML 2.0 Response XML Document
  */
 export async function buildSamlResponse({
@@ -55,7 +82,7 @@ export async function buildSamlResponse({
 
   // Signing configuration
   signAssertion = true,
-  signResponse = false,
+  signResponse = true,
   privateKey = null,
   certPem = ''
 }) {
@@ -67,6 +94,10 @@ export async function buildSamlResponse({
 
   const notOnOrAfterDate = new Date(now.getTime() + validityMinutes * 60 * 1000);
   const notOnOrAfter = toIsoUtcString(notOnOrAfterDate);
+
+  // Bearer SubjectConfirmationData is a short-lived transmission token (5 minutes validity)
+  const bearerNotOnOrAfterDate = new Date(now.getTime() + 5 * 60 * 1000);
+  const bearerNotOnOrAfter = toIsoUtcString(bearerNotOnOrAfterDate);
 
   const responseId = generateId('_resp_');
   const assertionId = generateId('_asrt_');
@@ -105,7 +136,8 @@ export async function buildSamlResponse({
       for (const key of dbscKeys) {
         if (key.digest) {
           const alg = key.digestAlg || 'SHA-256';
-          adviceXml += `<dbsc:TrustedKey xmlns:dbsc="https://www.w3.org/ns/dbsc/saml" digest="${escapeXml(key.digest)}" digest_alg="${escapeXml(alg)}"/>`;
+          const normalizedDigest = toBase64Url(key.digest);
+          adviceXml += `<dbsc:TrustedKey xmlns:dbsc="https://www.w3.org/ns/dbsc/saml" digest="${escapeXml(normalizedDigest)}" digest_alg="${escapeXml(alg)}"/>`;
         }
       }
     }
@@ -114,7 +146,8 @@ export async function buildSamlResponse({
       for (const cert of dbscCertificates) {
         if (cert.fingerprint) {
           const alg = cert.fingerprintAlg || 'SHA-256';
-          adviceXml += `<dbsc:TrustedCertificate xmlns:dbsc="https://www.w3.org/ns/dbsc/saml" fingerprint="${escapeXml(cert.fingerprint)}" fingerprint_alg="${escapeXml(alg)}"/>`;
+          const normalizedFingerprint = toBase64Url(cert.fingerprint);
+          adviceXml += `<dbsc:TrustedCertificate xmlns:dbsc="https://www.w3.org/ns/dbsc/saml" fingerprint="${escapeXml(normalizedFingerprint)}" fingerprint_alg="${escapeXml(alg)}"/>`;
         }
       }
     }
@@ -126,8 +159,8 @@ export async function buildSamlResponse({
     adviceXml += '</saml:Advice>';
   }
 
-  // Build SubjectConfirmationData attributes
-  let subjectConfirmationDataAttrs = `NotOnOrAfter="${notOnOrAfter}"`;
+  // Build SubjectConfirmationData attributes with 5-minute validity window
+  let subjectConfirmationDataAttrs = `NotOnOrAfter="${bearerNotOnOrAfter}"`;
   if (acsUrl) {
     subjectConfirmationDataAttrs += ` Recipient="${escapeXml(acsUrl)}"`;
   }
@@ -147,6 +180,7 @@ export async function buildSamlResponse({
   statusXml += '</samlp:Status>';
 
   // Construct complete SAML Response XML template
+  // Schema order for Assertion: Subject -> Conditions -> Advice -> AuthnStatement -> AttributeStatement
   const rawXml = `<?xml version="1.0" encoding="UTF-8"?>
 <samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
                 xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
@@ -170,13 +204,13 @@ export async function buildSamlResponse({
         <saml:Audience>${escapeXml(spEntityId)}</saml:Audience>
       </saml:AudienceRestriction>
     </saml:Conditions>
+    ${adviceXml}
     <saml:AuthnStatement AuthnInstant="${toIsoUtcString(authnInstant)}"
                          SessionIndex="${sessionIndex}">
       <saml:AuthnContext>
         <saml:AuthnContextClassRef>${authnContextClassRef}</saml:AuthnContextClassRef>
       </saml:AuthnContext>
     </saml:AuthnStatement>
-    ${adviceXml}
     ${attributeStatementXml}
     ${customStatementsXml}
   </saml:Assertion>
@@ -273,3 +307,4 @@ export function formatXml(xml, indent = '  ') {
 
   return formatted.trim();
 }
+
