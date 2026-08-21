@@ -26,6 +26,8 @@ This document provides architectural context, design constraints, and developer 
 │   └── verify.js           # 🧪 Automated verification test suite (Node test runner)
 └── public/                 # 🌐 Web root / Served assets
     ├── index.html          # Main single-page application & SP configuration hub
+    ├── logout.html         # Single Logout (SLO) endpoint
+    ├── change-password.html# Change Password / Self-Service endpoint
     ├── 404.html            # 404 handler
     ├── _headers            # Security (HSTS, CSP) & CORS headers
     ├── idp-cert.pem        # Static default X.509 certificate for SP upload

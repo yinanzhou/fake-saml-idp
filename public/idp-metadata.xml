@@ -20,8 +20,8 @@
     <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
                             Location="https://fake-saml-idp.pages.dev/"/>
     <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
-                            Location="https://fake-saml-idp.pages.dev/"/>
+                            Location="https://fake-saml-idp.pages.dev/logout.html"/>
     <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
-                            Location="https://fake-saml-idp.pages.dev/"/>
+                            Location="https://fake-saml-idp.pages.dev/logout.html"/>
   </md:IDPSSODescriptor>
 </md:EntityDescriptor>

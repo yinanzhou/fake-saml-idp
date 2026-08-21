@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>404 Not Found - Fake SAML IdP</title>
+  <title>Logout - Fake SAML IdP</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
-    .not-found-wrapper {
+    .endpoint-wrapper {
       min-height: 80vh;
       display: flex;
       flex-direction: column;
@@ -15,19 +15,20 @@
       text-align: center;
       padding: 24px;
     }
-    .not-found-code {
-      font-size: 72px;
+    .endpoint-code {
+      font-size: 56px;
       font-weight: 800;
-      color: var(--accent-blue);
+      color: var(--accent-green);
       line-height: 1;
       margin-bottom: 12px;
     }
-    .not-found-title {
+    .endpoint-title {
       font-size: 22px;
       font-weight: 700;
       margin-bottom: 8px;
+      color: var(--text);
     }
-    .not-found-desc {
+    .endpoint-desc {
       color: var(--text-secondary);
       max-width: 480px;
       margin-bottom: 24px;
@@ -44,22 +45,19 @@
     </div>
     <div class="header-actions">
       <a href="/" class="btn btn-sm">SSO Hub</a>
-      <a href="/logout.html" class="btn btn-sm">Logout</a>
       <a href="/change-password.html" class="btn btn-sm">Password</a>
       <button type="button" class="btn btn-sm" id="btn-toggle-theme" title="Toggle Dark/Light Mode">Theme</button>
     </div>
   </header>
 
-  <div class="not-found-wrapper">
-    <div class="not-found-code">404</div>
-    <h1 class="not-found-title">Page or Endpoint Not Found</h1>
-    <p class="not-found-desc">
-      The requested endpoint was not found. Please navigate back to the main identity provider hub or access our standard testing endpoints below.
+  <div class="endpoint-wrapper">
+    <div class="endpoint-code">Logout</div>
+    <h1 class="endpoint-title">Single Logout (SLO) Endpoint</h1>
+    <p class="endpoint-desc">
+      You have been successfully logged out. This is a fake Single Logout endpoint for testing SAML Service Providers.
     </p>
     <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
       <a href="/" class="btn btn-primary btn-lg">Back to Hub</a>
-      <a href="/logout.html" class="btn btn-lg">Single Logout (SLO)</a>
-      <a href="/change-password.html" class="btn btn-lg">Change Password</a>
       <a href="/idp-metadata.xml" class="btn btn-lg">View Metadata XML</a>
     </div>
   </div>

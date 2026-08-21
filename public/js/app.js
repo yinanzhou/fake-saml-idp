@@ -14,6 +14,8 @@ const state = {
   domain: window.location.origin.includes('pages.dev') ? 'https://fake-saml-idp.pages.dev' : window.location.origin,
   idpEntityId: '',
   ssoUrl: '',
+  sloUrl: '',
+  changePasswordUrl: '',
   metadataUrl: '',
   certUrl: '',
 
@@ -73,6 +75,8 @@ async function initApp() {
   // Set URLs based on domain
   state.idpEntityId = `${state.domain}/saml/idp`;
   state.ssoUrl = `${state.domain}/`;
+  state.sloUrl = `${state.domain}/logout.html`;
+  state.changePasswordUrl = `${state.domain}/change-password.html`;
   state.metadataUrl = `${state.domain}/idp-metadata.xml`;
   state.certUrl = `${state.domain}/idp-cert.pem`;
 
@@ -187,12 +191,19 @@ function showRequestBanner() {
  * Render Relying Party Landing page configuration
  */
 function renderLandingConfig() {
-  document.getElementById('landing-sso-url').textContent = state.ssoUrl;
-  document.getElementById('landing-entity-id').textContent = state.idpEntityId;
-  document.getElementById('landing-metadata-url').textContent = state.metadataUrl;
-  document.getElementById('landing-cert-url').textContent = state.certUrl;
-  document.getElementById('landing-fingerprint').textContent = state.activeKeyPair.fingerprintSha256;
-  document.getElementById('landing-cert-b64').value = pemToBase64(state.activeKeyPair.certPem);
+  const setEl = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
+  setEl('landing-sso-url', state.ssoUrl);
+  setEl('landing-slo-url', state.sloUrl);
+  setEl('landing-change-pass-url', state.changePasswordUrl);
+  setEl('landing-entity-id', state.idpEntityId);
+  setEl('landing-metadata-url', state.metadataUrl);
+  setEl('landing-cert-url', state.certUrl);
+  setEl('landing-fingerprint', state.activeKeyPair.fingerprintSha256);
+  const certB64El = document.getElementById('landing-cert-b64');
+  if (certB64El) certB64El.value = pemToBase64(state.activeKeyPair.certPem);
 }
 
 /**
@@ -434,9 +445,9 @@ function renderMetadataView() {
     <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
                             Location="${state.ssoUrl}"/>
     <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
-                            Location="${state.ssoUrl}"/>
+                            Location="${state.sloUrl}"/>
     <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
-                            Location="${state.ssoUrl}"/>
+                            Location="${state.sloUrl}"/>
   </md:IDPSSODescriptor>
 </md:EntityDescriptor>`;
 
@@ -905,6 +916,8 @@ function attachEventListeners() {
 
   // Copy Buttons
   document.getElementById('btn-copy-sso-url')?.addEventListener('click', () => copyToClipboard(state.ssoUrl, 'SSO URL copied!'));
+  document.getElementById('btn-copy-slo-url')?.addEventListener('click', () => copyToClipboard(state.sloUrl, 'Single Logout (SLO) URL copied!'));
+  document.getElementById('btn-copy-change-pass-url')?.addEventListener('click', () => copyToClipboard(state.changePasswordUrl, 'Change Password URL copied!'));
   document.getElementById('btn-copy-entity-id')?.addEventListener('click', () => copyToClipboard(state.idpEntityId, 'IdP Entity ID copied!'));
   document.getElementById('btn-copy-metadata-url')?.addEventListener('click', () => copyToClipboard(state.metadataUrl, 'Metadata URL copied!'));
   document.getElementById('btn-copy-cert-url')?.addEventListener('click', () => copyToClipboard(state.certUrl, 'Certificate URL copied!'));

@@ -444,6 +444,25 @@ async function runTests() {
   const isAsrtSigValid = asrtVerifier.verify(DEFAULT_KEY_PAIR.certPem, Buffer.from(asrtSignatureValue, 'base64'));
   assert(isAsrtSigValid === true, 'Assertion SignatureValue verified successfully with RSA-SHA256 against X.509 certificate');
 
+  // 8. Test Static Endpoints (Logout & Change Password)
+  console.log('\n8. Static Endpoints (Single Logout & Change Password):');
+  const fs = await import('fs');
+  const path = await import('path');
+
+  const logoutExists = fs.existsSync(path.resolve('public/logout.html'));
+  assert(logoutExists === true, 'public/logout.html exists');
+  if (logoutExists) {
+    const logoutContent = fs.readFileSync(path.resolve('public/logout.html'), 'utf-8');
+    assert(logoutContent.includes('Single Logout') && logoutContent.includes('logged out'), 'logout.html contains SLO content');
+  }
+
+  const changePassExists = fs.existsSync(path.resolve('public/change-password.html'));
+  assert(changePassExists === true, 'public/change-password.html exists');
+  if (changePassExists) {
+    const changePassContent = fs.readFileSync(path.resolve('public/change-password.html'), 'utf-8');
+    assert(changePassContent.includes('Change Password'), 'change-password.html contains change password content');
+  }
+
   console.log(`\n========================================`);
   console.log(`Test Results: ${passed} Passed, ${failed} Failed`);
   console.log(`========================================\n`);

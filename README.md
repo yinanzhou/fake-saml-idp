@@ -17,6 +17,8 @@ A SAML 2.0 Identity Provider designed for testing SAML Service Providers (SPs), 
 | Configuration Field | Value |
 | :--- | :--- |
 | **Single Sign-On (SSO) URL** | `https://fake-saml-idp.pages.dev/` |
+| **Single Logout (SLO) URL** | `https://fake-saml-idp.pages.dev/logout.html` |
+| **Change Password URL** | `https://fake-saml-idp.pages.dev/change-password.html` |
 | **IdP Entity ID / Issuer** | `https://fake-saml-idp.pages.dev/saml/idp` |
 | **SAML Metadata XML URL** | `https://fake-saml-idp.pages.dev/idp-metadata.xml` |
 | **Direct Certificate URL** | `https://fake-saml-idp.pages.dev/idp-cert.pem` |
@@ -34,6 +36,8 @@ A SAML 2.0 Identity Provider designed for testing SAML Service Providers (SPs), 
 │   └── verify.js       # Automated verification test suite
 └── public/             # Served assets
     ├── index.html      # Main application & Relying Party hub
+    ├── logout.html     # Single Logout (SLO) endpoint
+    ├── change-password.html # Change Password / Self-Service endpoint
     ├── 404.html        # 404 handler
     ├── _headers        # Security & CORS headers
     ├── idp-cert.pem    # Default X.509 certificate for direct upload
