@@ -2,8 +2,6 @@
 
 A SAML 2.0 Identity Provider designed for testing SAML Service Providers (SPs), custom SAML assertions, dynamic attributes, and **W3C Device Bound Session Credentials (DBSC)**.
 
----
-
 ## Key Features
 
 - **Sensible Out-of-the-Box Defaults**: Pre-populated with standard user identity (`user@example.com`, Jane Doe, roles, groups, timestamps) for instant testing.
@@ -11,8 +9,6 @@ A SAML 2.0 Identity Provider designed for testing SAML Service Providers (SPs), 
 - **W3C DBSC (Device Bound Session Credentials)**: Support for `<saml:Advice>` containing `<dbsc:TrustedKey>` and `<dbsc:TrustedCertificate>` conforming to the official W3C schema (`xmlns:dbsc="https://www.w3.org/ns/dbsc/saml"`).
 - **XML-DSig Signing**: Computes W3C Exclusive Canonicalization (`c14n-exc`) and generates RSA-SHA256 digital signatures.
 - **Relying Party Hub & Cheatsheets**: Copy cards for SSO URLs, EntityID, Certificate PEM, Base64 strings, SHA-256 fingerprints, and metadata downloads.
-
----
 
 ## Relying Party (Service Provider) Configuration
 
@@ -25,12 +21,11 @@ A SAML 2.0 Identity Provider designed for testing SAML Service Providers (SPs), 
 | **Default NameID Format** | `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress` |
 | **Supported Bindings** | `HTTP-Redirect` & `HTTP-POST` |
 
----
-
 ## File Structure
 
 ```
 .
+├── AGENTS.md           # Developer & AI Agent architectural context
 ├── README.md           # Documentation and quick start guide
 ├── package.json        # Project metadata & test scripts
 ├── tests/
@@ -52,8 +47,6 @@ A SAML 2.0 Identity Provider designed for testing SAML Service Providers (SPs), 
         └── presets.js      # Built-in persona presets (Default, Google, DBSC, Azure AD, AWS IAM)
 ```
 
----
-
 ## Local Development & Testing
 
 Run automated tests:
@@ -68,7 +61,9 @@ npm run serve
 python3 -m http.server -d public 8000
 ```
 
----
+## AI Agent & Developer Architecture Guide
+
+For AI coding agents and human contributors looking to extend the codebase, inspect [**`AGENTS.md`**](file:///Users/yinanzhou/Desktop/Test%20SAML%20IDP/AGENTS.md). It contains architectural constraints, the ES6 module map, W3C DBSC schema extension guidelines, and XML-DSig canonicalization rules.
 
 ## Disclaimer & Limitation of Liability
 
