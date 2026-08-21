@@ -1,6 +1,8 @@
 # Fake SAML 2.0 Identity Provider (IdP)
 
-A SAML 2.0 Identity Provider designed for testing SAML Service Providers (SPs), custom SAML assertions, dynamic attributes, and **W3C Device Bound Session Credentials (DBSC)**.
+A client-side SAML 2.0 Identity Provider designed for testing SAML Service Providers (SPs), custom SAML assertions, dynamic attributes, and **W3C Device Bound Session Credentials (DBSC)**.
+
+🔗 **Live Deployment**: [https://fake-saml-idp.pages.dev/](https://fake-saml-idp.pages.dev/)
 
 ## Key Features
 
@@ -17,8 +19,8 @@ A SAML 2.0 Identity Provider designed for testing SAML Service Providers (SPs), 
 | Configuration Field | Value |
 | :--- | :--- |
 | **Single Sign-On (SSO) URL** | `https://fake-saml-idp.pages.dev/` |
-| **Single Logout (SLO) URL** | `https://fake-saml-idp.pages.dev/logout.html` |
-| **Change Password URL** | `https://fake-saml-idp.pages.dev/change-password.html` |
+| **Single Logout (SLO) URL** | `https://fake-saml-idp.pages.dev/logout` |
+| **Change Password URL** | `https://fake-saml-idp.pages.dev/change-password` |
 | **IdP Entity ID / Issuer** | `https://fake-saml-idp.pages.dev/saml/idp` |
 | **SAML Metadata XML URL** | `https://fake-saml-idp.pages.dev/idp-metadata.xml` |
 | **Direct Certificate URL** | `https://fake-saml-idp.pages.dev/idp-cert.pem` |
@@ -66,6 +68,18 @@ npm run serve
 # or
 python3 -m http.server -d public 8000
 ```
+
+## Relevant Specifications & Standards
+
+- **W3C Device Bound Session Credentials (DBSC)**:
+  - [W3C DBSC Specification (WICG / IETF)](https://github.com/WICG/dbsc)
+  - [W3C DBSC SAML Extension Schema (`dbsc-saml.xsd`)](https://www.w3.org/ns/dbsc/saml/dbsc-saml.xsd)
+  - [DBSC Trusted Key Digest & Certificate Fingerprint Encodings (RFC 4648 §5 Base64URL)](https://datatracker.ietf.org/doc/html/rfc4648#section-5)
+- **SAML 2.0 & Cryptography**:
+  - [OASIS SAML 2.0 Core Specification (`saml-core-2.0-os`)](https://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf)
+  - [OASIS SAML 2.0 Web Browser SSO & Single Logout (SLO) Profiles](https://docs.oasis-open.org/security/saml/v2.0/saml-profiles-2.0-os.pdf)
+  - [W3C Exclusive XML Canonicalization (`c14n-exc`)](https://www.w3.org/TR/xml-exc-c14n/)
+  - [W3C XML-Signature Syntax and Processing (`xmldsig-core`)](https://www.w3.org/TR/xmldsig-core/)
 
 ## AI Agent & Developer Architecture Guide
 

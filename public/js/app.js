@@ -75,8 +75,8 @@ async function initApp() {
   // Set URLs based on domain
   state.idpEntityId = `${state.domain}/saml/idp`;
   state.ssoUrl = `${state.domain}/`;
-  state.sloUrl = `${state.domain}/logout.html`;
-  state.changePasswordUrl = `${state.domain}/change-password.html`;
+  state.sloUrl = `${state.domain}/logout`;
+  state.changePasswordUrl = `${state.domain}/change-password`;
   state.metadataUrl = `${state.domain}/idp-metadata.xml`;
   state.certUrl = `${state.domain}/idp-cert.pem`;
 
