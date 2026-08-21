@@ -6,7 +6,7 @@
 
 import { DEFAULT_KEY_PAIR, pemToBase64, computeCertFingerprint, importPrivateKey } from '../public/js/crypto-keys.js';
 import { PRESETS, detectSmartPreset } from '../public/js/presets.js';
-import { decompressRawDeflate, parseAuthnRequestXml } from '../public/js/saml-parser.js';
+import { decompressRawDeflate, parseAuthnRequestXml, parseCurrentUrlParams } from '../public/js/saml-parser.js';
 import { buildSamlResponse, toBase64Url } from '../public/js/saml-builder.js';
 import { canonicalize, computeXmlDigest } from '../public/js/xml-signer.js';
 import zlib from 'zlib';
@@ -326,6 +326,14 @@ async function runTests() {
   assert(parsed.acsUrl === 'https://sp.example.com/saml/acs', 'Extracted ACS URL');
   assert(parsed.issuer === 'https://sp.example.com/metadata', 'Extracted SP Entity ID');
   assert(parsed.requestedSubject === 'test.user@company.com', 'Extracted requested Subject / login_hint');
+
+  const urlHint1 = await parseCurrentUrlParams('?login_hint=alice@example.com');
+  assert(urlHint1.loginHint === 'alice@example.com', 'Extracted snake_case login_hint parameter');
+  assert(urlHint1.loginHintSource.includes('?login_hint='), 'loginHintSource references login_hint');
+
+  const urlHint2 = await parseCurrentUrlParams('?LoginHint=bob@example.com');
+  assert(urlHint2.loginHint === 'bob@example.com', 'Extracted PascalCase LoginHint parameter');
+  assert(urlHint2.loginHintSource.includes('?LoginHint='), 'loginHintSource references LoginHint');
 
   // 5. Test W3C Exclusive XML Canonicalization (c14n-exc) Subtree Namespace Inheritance
   console.log('\n5. W3C Exclusive XML Canonicalization (c14n-exc):');

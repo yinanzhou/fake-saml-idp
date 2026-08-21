@@ -70,8 +70,8 @@ This document provides architectural context, design constraints, and developer 
 - **RFC 1951 Deflate Decoding**:
   - Browser environments use the native `DecompressionStream('deflate-raw')` with fallback to `DecompressionStream('deflate')`.
   - Automated tests running in Node.js fallback gracefully to `zlib.inflateRawSync`.
-- **`login_hint` Extraction**:
-  - Extracts subject identity from query parameters (`?login_hint=...`, `?username=...`, `?email=...`) or from incoming `<saml:Subject><saml:NameID>` in the `AuthnRequest`.
+- **`login_hint` & `LoginHint` Extraction**:
+  - Extracts subject identity from query parameters (`?login_hint=...`, `?LoginHint=...`, `?username=...`, `?email=...`) or from incoming `<saml:Subject><saml:NameID>` in the `AuthnRequest`.
 
 ### D. Presets & Smart SP Detection (`public/js/presets.js` & `public/js/app.js`)
 - **Smart Preset Detection**:

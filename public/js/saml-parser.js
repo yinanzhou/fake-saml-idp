@@ -172,7 +172,7 @@ export function parseAuthnRequestXml(xmlString) {
 /**
  * Parses current page URL query string for SSO parameters & login_hint
  */
-export async function parseCurrentUrlParams(searchString = window.location.search) {
+export async function parseCurrentUrlParams(searchString = (typeof window !== 'undefined' && window.location ? window.location.search : '')) {
   const urlParams = new URLSearchParams(searchString);
 
   const samlRequestRaw = urlParams.get('SAMLRequest');
@@ -180,13 +180,15 @@ export async function parseCurrentUrlParams(searchString = window.location.searc
   const sigAlg = urlParams.get('SigAlg') || '';
   const signature = urlParams.get('Signature') || '';
 
-  // Check login_hint from URL params
-  const loginHint = urlParams.get('login_hint')
-    || urlParams.get('loginHint')
-    || urlParams.get('username')
-    || urlParams.get('email')
-    || urlParams.get('user')
-    || '';
+  // Check login hint from URL params (supports snake_case login_hint, PascalCase LoginHint, camelCase loginHint, username, email, user)
+  let matchedParam = null;
+  for (const key of ['login_hint', 'LoginHint', 'loginHint', 'username', 'email', 'user']) {
+    if (urlParams.get(key)) {
+      matchedParam = key;
+      break;
+    }
+  }
+  const loginHint = matchedParam ? urlParams.get(matchedParam) : '';
 
   let parsedRequest = null;
   let parseError = null;
@@ -203,7 +205,7 @@ export async function parseCurrentUrlParams(searchString = window.location.searc
 
   // Determine effective login_hint source
   let effectiveLoginHint = loginHint;
-  let loginHintSource = loginHint ? 'URL Parameter (?login_hint=...)' : '';
+  let loginHintSource = loginHint ? `URL Parameter (?${matchedParam}=...)` : '';
 
   if (!effectiveLoginHint && parsedRequest && parsedRequest.requestedSubject) {
     effectiveLoginHint = parsedRequest.requestedSubject;
