@@ -21,7 +21,7 @@ This document provides architectural context, design constraints, and developer 
 ├── README.md               # 📖 User documentation & deployment guide
 ├── package.json            # 📦 Test scripts and project metadata
 ├── .github/
-│   └── workflows/test.yml  # ⚙️ GitHub Actions CI test pipeline (Node 18/20/22)
+│   └── workflows/test.yml  # ⚙️ GitHub Actions CI test pipeline (Node 20/22/24)
 ├── tests/
 │   └── verify.js           # 🧪 Automated verification test suite (Node test runner)
 └── public/                 # 🌐 Web root / Served assets
