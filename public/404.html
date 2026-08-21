@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 Not Found - Fake SAML IdP</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .not-found-wrapper {
+      min-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+    .not-found-code {
+      font-size: 72px;
+      font-weight: 800;
+      color: var(--accent-blue);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+    .not-found-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .not-found-desc {
+      color: var(--text-secondary);
+      max-width: 480px;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-title">Fake SAML IdP</div>
+    </div>
+  </header>
+
+  <div class="not-found-wrapper">
+    <div class="not-found-code">404</div>
+    <h1 class="not-found-title">Page or Endpoint Not Found</h1>
+    <p class="not-found-desc">
+      The requested endpoint was not found. Please navigate back to the main identity provider hub.
+    </p>
+    <div style="display: flex; gap: 12px;">
+      <a href="/" class="btn btn-primary btn-lg">Back to Hub</a>
+      <a href="idp-metadata.xml" class="btn btn-lg">View Metadata XML</a>
+    </div>
+  </div>
+</body>
+</html>

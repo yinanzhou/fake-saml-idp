@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fake SAML IdP - SAML 2.0 Identity Provider</title>
+  <meta name="description" content="Fake SAML 2.0 Identity Provider supporting arbitrary assertions, dynamic attributes, and W3C Device Bound Session Credentials (DBSC).">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-title">Fake SAML IdP</div>
+    </div>
+
+    <div class="header-actions">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label for="preset-selector" style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">Preset:</label>
+        <select id="preset-selector" class="form-select" style="width: auto; padding: 4px 8px; font-size: 12px;">
+          <option value="default">Default (Sensible Defaults)</option>
+          <option value="google">Google Workspace</option>
+          <option value="dbsc">W3C DBSC (Device Bound Session)</option>
+          <option value="azure_ad">Microsoft Entra ID (Azure AD)</option>
+          <option value="aws_iam">AWS IAM SAML Role</option>
+        </select>
+      </div>
+
+      <button type="button" class="btn btn-sm" id="btn-toggle-theme" title="Toggle Dark/Light Mode">Theme</button>
+    </div>
+  </header>
+
+  <!-- Alert Banner when SAMLRequest or login_hint detected -->
+  <div class="alert-banner" id="request-alert-banner" style="display: none;">
+    <div class="alert-content">
+      <span id="banner-message">Incoming SAML Request detected</span>
+    </div>
+    <button type="button" class="btn btn-sm btn-primary" id="btn-banner-submit" onclick="document.getElementById('btn-submit-saml-response').click()">Submit Response &rarr;</button>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <nav class="tabs-nav">
+    <button type="button" class="tab-btn active" data-tab="tab-landing">Relying Party Setup</button>
+    <button type="button" class="tab-btn" data-tab="tab-inspector">SAML Request</button>
+    <button type="button" class="tab-btn" data-tab="tab-editor">SAML Response</button>
+    <button type="button" class="tab-btn" data-tab="tab-metadata">SAML Metadata</button>
+  </nav>
+
+  <!-- Main Content Container -->
+  <main class="main-container">
+
+    <!-- TAB 1: Relying Party Landing Hub & Setup Guide -->
+    <section class="tab-panel active" id="tab-landing">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Relying Party / Service Provider Configuration</div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-sm btn-blue" id="btn-download-landing-cert">Download Certificate (.pem)</button>
+            <a href="idp-metadata.xml" download="idp-metadata.xml" class="btn btn-sm btn-primary">Download Metadata XML</a>
+          </div>
+        </div>
+        <p class="card-desc">
+          Share these parameters with your Relying Party (Service Provider) such as AWS IAM, Okta, Azure AD, Auth0, Google Workspace, or custom SAML applications.
+        </p>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Single Sign-On (SSO) URL</label>
+            <div class="copy-box">
+              <span class="copy-box-text" id="landing-sso-url">https://fake-saml-idp.pages.dev/</span>
+              <button type="button" class="btn btn-sm" id="btn-copy-sso-url">Copy</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">IdP Entity ID / Issuer</label>
+            <div class="copy-box">
+              <span class="copy-box-text" id="landing-entity-id">https://fake-saml-idp.pages.dev/saml/idp</span>
+              <button type="button" class="btn btn-sm" id="btn-copy-entity-id">Copy</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">SAML Metadata URL</label>
+            <div class="copy-box">
+              <span class="copy-box-text" id="landing-metadata-url">https://fake-saml-idp.pages.dev/idp-metadata.xml</span>
+              <button type="button" class="btn btn-sm" id="btn-copy-metadata-url">Copy</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Certificate URL</label>
+            <div class="copy-box">
+              <span class="copy-box-text" id="landing-cert-url">https://fake-saml-idp.pages.dev/idp-cert.pem</span>
+              <button type="button" class="btn btn-sm" id="btn-copy-cert-url">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: 10px;">
+          <div class="form-group">
+            <label class="form-label">Certificate Fingerprint (SHA-256)</label>
+            <div class="copy-box">
+              <span class="copy-box-text" id="landing-fingerprint">CD:69:12:BD:FF:45:F1:2C:22:B9:00:A9:56:DF:12:49:25:33:F5:64:12:F9:A6:0E:85:4D:67:7D:58:F0:7C:57</span>
+              <button type="button" class="btn btn-sm" id="btn-copy-cert-pem">Copy PEM</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Base64 Certificate String</label>
+            <div class="copy-box">
+              <input type="text" readonly class="copy-box-text" id="landing-cert-b64" value="..." style="background:none; border:none; outline:none; width:100%;">
+              <button type="button" class="btn btn-sm" id="btn-copy-cert-b64">Copy Base64</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Cheatsheet for Relying Parties -->
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 12px;">Quick Integration Cheatsheets</div>
+
+        <div class="grid-3">
+          <div class="guide-card">
+            <div class="guide-card-title">AWS IAM SAML Provider</div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
+              Upload <code>idp-metadata.xml</code> when creating an Identity Provider in AWS IAM. Select the AWS IAM preset from the top dropdown for <code>Role</code> and <code>RoleSessionName</code> attributes.
+            </p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-title">W3C DBSC Testing</div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
+              Select the <strong>W3C DBSC</strong> preset or enable the <em>DBSC &amp; Advice</em> section in the SAML Response form to assert device bound public key digests (<code>dbsc:TrustedKey</code>) and certificate fingerprints.
+            </p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-title">Node / Spring / Passport SAML</div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
+              Set <code>entryPoint: 'https://fake-saml-idp.pages.dev/'</code>, <code>issuer: 'https://fake-saml-idp.pages.dev/saml/idp'</code>, and upload or paste the certificate PEM.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: SAML Request Inspector -->
+    <section class="tab-panel" id="tab-inspector">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Incoming AuthnRequest Inspector</div>
+        </div>
+        <div id="request-inspector-content">
+          <!-- Populated by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: SAML Response (Unified Long Form) -->
+    <section class="tab-panel" id="tab-editor">
+      <!-- Top Action Bar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div>
+          <h2 style="font-size: 16px; font-weight: 600;">SAML 2.0 Response</h2>
+          <p style="font-size: 13px; color: var(--text-secondary);">
+            Pre-populated with sensible defaults. Configure identity, attributes, DBSC, keys, and submit response to the Service Provider.
+          </p>
+        </div>
+        <button type="button" class="btn btn-primary btn-lg" id="btn-submit-saml-response">
+          Submit SAML Response to SP
+        </button>
+      </div>
+
+      <!-- 1. User Subject & Session Settings -->
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 14px;">1. User Subject &amp; SAML Endpoints</div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Subject / NameID (User identifier or login_hint)</label>
+            <input type="text" id="input-name-id" class="form-input code-font" placeholder="user@example.com">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">NameID Format</label>
+            <select id="select-name-id-format" class="form-select">
+              <option value="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress">emailAddress (urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress)</option>
+              <option value="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">persistent (urn:oasis:names:tc:SAML:2.0:nameid-format:persistent)</option>
+              <option value="urn:oasis:names:tc:SAML:2.0:nameid-format:transient">transient (urn:oasis:names:tc:SAML:2.0:nameid-format:transient)</option>
+              <option value="urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified">unspecified (urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Assertion Consumer Service (ACS) URL</label>
+            <input type="url" id="input-acs-url" class="form-input code-font" placeholder="https://sp.example.com/saml/acs">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">SP Entity ID (Audience)</label>
+            <input type="text" id="input-sp-entity-id" class="form-input code-font" placeholder="https://sp.example.com/saml/metadata">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">InResponseTo (Request ID)</label>
+            <input type="text" id="input-in-response-to" class="form-input code-font" placeholder="Empty for IdP-Initiated">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">RelayState</label>
+            <input type="text" id="input-relay-state" class="form-input code-font" placeholder="Optional relay state">
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top: 6px;">
+          <div class="form-group">
+            <label class="form-label">Validity (Minutes)</label>
+            <input type="number" id="input-validity-mins" class="form-input" value="60" min="1" max="1440">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">AuthnContext Class Ref</label>
+            <input type="text" id="input-authn-context" class="form-input code-font" value="urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">SAML Status Code</label>
+            <select id="select-status-code" class="form-select">
+              <option value="urn:oasis:names:tc:SAML:2.0:status:Success">Success</option>
+              <option value="urn:oasis:names:tc:SAML:2.0:status:Requester">Requester Error</option>
+              <option value="urn:oasis:names:tc:SAML:2.0:status:Responder">Responder Error</option>
+              <option value="urn:oasis:names:tc:SAML:2.0:status:AuthnFailed">AuthnFailed</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. SAML Attributes Table -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">2. SAML Attributes (&lt;saml:AttributeStatement&gt;)</div>
+          <button type="button" class="btn btn-sm btn-primary" id="btn-add-attribute">+ Add Attribute</button>
+        </div>
+
+        <table class="attr-table">
+          <thead>
+            <tr>
+              <th>Attribute Name</th>
+              <th>Format</th>
+              <th>Values</th>
+              <th style="text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="attributes-table-body">
+            <!-- Rendered by app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 3. DBSC (Device Bound Session Credentials) & Custom Advice -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">3. W3C Device Bound Session Credentials (DBSC) &amp; Advice</div>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+            <input type="checkbox" id="dbsc-enabled-toggle">
+            <strong>Enable &lt;saml:Advice&gt; DBSC Extension</strong>
+          </label>
+        </div>
+        <p class="card-desc">
+          Assert cryptographic key digests and certificate fingerprints bound to the user's client device per the W3C DBSC specification (<code>xmlns:dbsc="https://www.w3.org/NS/DBSC"</code>).
+        </p>
+
+        <div id="dbsc-details-container" style="display: none;">
+          <!-- Trusted Keys -->
+          <div style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h4 style="font-size: 13px; font-weight: 600; color: var(--text);">&lt;dbsc:TrustedKey&gt; Elements</h4>
+              <button type="button" class="btn btn-sm" id="btn-add-dbsc-key">+ Add Trusted Key</button>
+            </div>
+            <div id="dbsc-keys-container">
+              <!-- Populated by app.js -->
+            </div>
+          </div>
+
+          <!-- Trusted Certificates -->
+          <div style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h4 style="font-size: 13px; font-weight: 600; color: var(--text);">&lt;dbsc:TrustedCertificate&gt; Elements</h4>
+              <button type="button" class="btn btn-sm" id="btn-add-dbsc-cert">+ Add Trusted Certificate</button>
+            </div>
+            <div id="dbsc-certs-container">
+              <!-- Populated by app.js -->
+            </div>
+          </div>
+
+          <!-- Custom Raw Advice XML -->
+          <div class="form-group" style="margin-top: 14px;">
+            <label class="form-label">Additional Custom &lt;saml:Advice&gt; XML (Optional)</label>
+            <textarea id="input-custom-advice-xml" class="form-textarea code-font" rows="3" placeholder="<custom:Element xmlns:custom=&quot;...&quot;>...</custom:Element>"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Keys & XMLDSig Digital Signing -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">4. Cryptographic Keys &amp; Digital Signing</div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-sm btn-blue" id="btn-generate-keypair">Generate New RSA Keypair</button>
+            <button type="button" class="btn btn-sm" id="btn-download-cert">Download Certificate</button>
+          </div>
+        </div>
+        <p class="card-desc">
+          Signatures are generated using standard RSASSA-PKCS1-v1_5 with SHA-256 and W3C Exclusive Canonicalization.
+        </p>
+
+        <div class="grid-2" style="margin-bottom: 16px;">
+          <div class="form-group">
+            <label class="form-label">X.509 Public Certificate (PEM)</label>
+            <textarea id="key-cert-pem" class="form-textarea code-font" rows="7"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">RSA Private Key (PKCS#8 PEM)</label>
+            <textarea id="key-pkcs8-pem" class="form-textarea code-font" rows="7"></textarea>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div style="font-size: 12px; color: var(--text-secondary);">
+            SHA-256 Fingerprint: <strong id="key-fingerprint" style="color: var(--text); font-family: var(--font-mono);">...</strong>
+          </div>
+          <button type="button" class="btn btn-sm btn-primary" id="btn-apply-custom-keys">Apply Custom Keys</button>
+        </div>
+
+        <div class="card" style="background-color: var(--bg-subtle); margin-bottom: 0;">
+          <div class="card-title" style="font-size: 13px; margin-bottom: 8px;">Signature Targets</div>
+          <div style="display: flex; gap: 20px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+              <input type="checkbox" id="sign-assertion-toggle" checked>
+              <strong>Sign &lt;saml:Assertion&gt; (Standard)</strong>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+              <input type="checkbox" id="sign-response-toggle">
+              <strong>Sign &lt;samlp:Response&gt;</strong>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Response Preview & Direct Submit -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">5. Signed SAML 2.0 Response Preview &amp; Submit</div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-sm" id="btn-copy-response-xml">Copy XML</button>
+            <button type="button" class="btn btn-sm" id="btn-copy-response-b64">Copy Base64</button>
+            <button type="button" class="btn btn-primary" id="btn-preview-submit-saml">Submit to SP ACS</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px; font-size: 12px; color: var(--text-secondary);">
+          Target ACS URL: <strong id="post-acs-target-label" style="color: var(--text); font-family: var(--font-mono);">...</strong>
+        </div>
+
+        <div class="code-viewer-container" style="margin-bottom: 16px;">
+          <div class="code-viewer-header">
+            <span>Formatted SAML Response XML</span>
+          </div>
+          <pre class="code-viewer-content" id="response-xml-preview">Generating SAML Response...</pre>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Base64 Encoded SAMLResponse Payload</label>
+          <textarea id="response-b64-preview" readonly class="form-textarea code-font" rows="4" style="background-color: var(--bg-subtle);"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: SAML Metadata Viewer -->
+    <section class="tab-panel" id="tab-metadata">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">SAML 2.0 IdP Metadata XML</div>
+          <div style="display: flex; gap: 8px;">
+            <a href="idp-metadata.xml" target="_blank" class="btn btn-sm">Open idp-metadata.xml</a>
+            <button type="button" class="btn btn-sm btn-primary" id="btn-download-metadata">Download Metadata XML</button>
+          </div>
+        </div>
+        <div class="code-viewer-container">
+          <pre class="code-viewer-content" id="metadata-xml-viewer">Loading metadata...</pre>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Application Module -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

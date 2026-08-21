@@ -1,0 +1,23 @@
+# Global security headers for all routes
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https: http:; font-src 'self' data:; form-action *;
+
+# Enable CORS for SAML Metadata XML so relying parties can fetch it dynamically
+/idp-metadata.xml
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, OPTIONS
+  Access-Control-Allow-Headers: Content-Type
+  Content-Type: application/samlmetadata+xml; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+# Enable CORS and plain text content-type for Certificate download
+/idp-cert.pem
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, OPTIONS
+  Access-Control-Allow-Headers: Content-Type
+  Content-Type: application/x-pem-file; charset=utf-8
+  Cache-Control: public, max-age=86400

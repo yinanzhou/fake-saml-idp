@@ -1,0 +1,13 @@
+{
+  "name": "fake-saml-idp",
+  "version": "1.0.0",
+  "description": "Static client-side Fake SAML 2.0 Identity Provider with arbitrary statements and W3C DBSC advice support.",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/verify.js",
+    "serve": "npx serve public"
+  },
+  "keywords": ["saml", "saml-idp", "fake-saml-idp", "dbsc", "xmldsig", "cloudflare-pages"],
+  "author": "",
+  "license": "UNLICENSED"
+}

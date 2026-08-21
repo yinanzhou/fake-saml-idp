@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
+                     xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+                     entityID="https://fake-saml-idp.pages.dev/saml/idp">
+  <md:IDPSSODescriptor WantAuthnRequestsSigned="false"
+                       protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo id="KeyInfo-1">
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDjDCCAnQCCQDyOn/FzemXfjANBgkqhkiG9w0BAQsFADCBhzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExFjAUBgNVBAcMDVNhbiBGcmFuY2lzY28xFjAUBgNVBAoMDUZha2UgU0FNTCBJZFAxETAPBgNVBAsMCElkZW50aXR5MSAwHgYDVQQDDBdmYWtlLXNhbWwtaWRwLnBhZ2VzLmRldjAeFw0yNjA4MjEwMTU2MDFaFw00NjA4MTYwMTU2MDFaMIGHMQswCQYDVQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzEWMBQGA1UECgwNRmFrZSBTQU1MIElkUDERMA8GA1UECwwISWRlbnRpdHkxIDAeBgNVBAMMF2Zha2Utc2FtbC1pZHAucGFnZXMuZGV2MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnYfxudQ/x32l9Cg6ojExwgPIHjDnAPxuB52S+7+nPxmVYkYsOdQvigGBL175ifCI5AuR7vHA89nDjMrxa4a5zeucjsXk6VEnptISHZ+GI9VPcoihK7P2vcHReNuyWy6njB3lHtNyFXxo+NwvSHuHj3Fl4Gr3fP8nmOqwBrCv3i/7y58pu+6OqCOshFMPzPL/oCBJ78ry6vbIEmV9rQukv/pAroHbi04nDv/dCpGsjJEAsM4JMJfR9oeW162TVnNGinIHTw5iUPMfmuAuLh+hT+yFruAbar+y0VuCxhti0KZzZdSt7iDiCXSHF6M+xPPccst9YcuanQJ/lSE5SS+kEQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBiyt/w6CABDp0XAj+r7gjh+tRqTnvmFS5Kaffacg1EpkzV+GF9so1MuypaamO6SRh6H0XID8N2jdBd2Ld6AvqwgHmKBDFxq229rzNDQ56pXuBrjTCKIukq5FtXrGgKVICd0Gexh22lYmzzKz7hU6WdJuTqcd4KpKSd/0HfJeorIAwFLmkC4nxFE1/23OGDZpOUUB9cuLM9VyuOnoEA8IDFNAe/teJDNT085NCwq1NHEqyL4gUP92MxyfdMVXiUoYoPNtjIfhYmeL1kthsB17GzF287WszF5/vgixixz+FIoDGM1W8uXqP1tEJFke5Mrm4TxweGDwFVtTYUAYTfPVWH</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:transient</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified</md:NameIDFormat>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+                            Location="https://fake-saml-idp.pages.dev/"/>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+                            Location="https://fake-saml-idp.pages.dev/"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+                            Location="https://fake-saml-idp.pages.dev/"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+                            Location="https://fake-saml-idp.pages.dev/"/>
+  </md:IDPSSODescriptor>
+</md:EntityDescriptor>
